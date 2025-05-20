@@ -23,6 +23,7 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
   const [challengeStartups, setChallengeStartups] = useState<Record<string, StartupListType[]>>({});
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [tokenUsage, setTokenUsage] = useState<TokenUsageType | null>(null);
+  const [groupedChallenges, setGroupedChallenges] = useState<Record<string, ChallengeType[]>>({});
 
   useEffect(() => {
     if (pulseCount >= 5) return;
@@ -66,6 +67,20 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
 
     fetchTokenUsage();
   }, []);
+
+  useEffect(() => {
+    // Group challenges by date
+    const grouped = challenges.reduce((groups, challenge) => {
+      const date = formatDate(challenge.createdAt);
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(challenge);
+      return groups;
+    }, {} as Record<string, ChallengeType[]>);
+    
+    setGroupedChallenges(grouped);
+  }, [challenges]);
 
   // Updated to show all folders expanded by default
   useEffect(() => {
@@ -129,16 +144,6 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
       </div>
     );
   };
-
-  // Group challenges by date
-  const groupedChallenges = challenges.reduce((groups, challenge) => {
-    const date = formatDate(challenge.createdAt);
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(challenge);
-    return groups;
-  }, {} as Record<string, ChallengeType[]>);
 
   return (
     <>
