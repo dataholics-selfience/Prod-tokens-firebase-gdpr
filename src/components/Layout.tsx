@@ -21,7 +21,10 @@ const Layout = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      setIsLoading(false);
+      return;
+    }
 
     const challengesQuery = query(
       collection(db, 'challenges'),
@@ -34,6 +37,7 @@ const Layout = () => {
         id: doc.id,
         ...doc.data()
       })) as ChallengeType[];
+      
       setChallenges(newChallenges);
 
       if (newChallenges.length === 0) {
@@ -47,6 +51,10 @@ const Layout = () => {
       } else if (!currentChallengeId) {
         setCurrentChallengeId(newChallenges[0].id);
       }
+      
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Error fetching challenges:', error);
       setIsLoading(false);
     });
 
@@ -102,7 +110,7 @@ const Layout = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
+        <div className="animate-pulse text-white text-lg">Carregando...</div>
       </div>
     );
   }
