@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { doc, getDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-const STARTUP_LIST_TOKEN_COST = 49;
+const STARTUP_LIST_TOKEN_COST = 30;
 
 const NewChallenge = () => {
   const [formData, setFormData] = useState({
