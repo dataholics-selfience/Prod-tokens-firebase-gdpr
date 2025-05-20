@@ -278,8 +278,9 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   };
 
   const handleInputClick = () => {
-    if (!currentChallenge) {
-      navigate('/new-challenge');
+    // Allow input interaction regardless of challenge selection or authentication status
+    if (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT) {
+      setShowLoginPrompt(true);
     }
   };
 
@@ -419,19 +420,21 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             ) : (
               <div className="flex items-center justify-between flex-1">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-lg font-medium">{currentChallenge?.title}</h2>
-                  <button
-                    onClick={() => {
-                      setEditData({
-                        title: currentChallenge?.title || '',
-                        description: currentChallenge?.description || ''
-                      });
-                      setIsEditing(true);
-                    }}
-                    className="p-1 text-gray-400 hover:text-white rounded-full hover:bg-gray-800 transition-colors"
-                  >
-                    <Pencil size={16} />
-                  </button>
+                  <h2 className="text-lg font-medium">{currentChallenge?.title || 'Chat Público'}</h2>
+                  {currentChallenge && auth.currentUser && (
+                    <button
+                      onClick={() => {
+                        setEditData({
+                          title: currentChallenge?.title || '',
+                          description: currentChallenge?.description || ''
+                        });
+                        setIsEditing(true);
+                      }}
+                      className="p-1 text-gray-400 hover:text-white rounded-full hover:bg-gray-800 transition-colors"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
                 </div>
                 <StartupListIcons challengeId={currentChallenge?.id} />
               </div>
@@ -491,16 +494,16 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             onClick={handleInputClick}
-            placeholder={currentChallenge ? "Digite uma mensagem..." : "Selecione um desafio para começar"}
+            placeholder={!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT ? "Crie uma conta para continuar conversando" : "Digite uma mensagem..."}
             className="w-full py-3 pl-4 pr-12 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100"
             rows={1}
-            disabled={isLoading}
+            disabled={isLoading || (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT)}
           />
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT)}
             className={`absolute right-2 bottom-2.5 p-1.5 rounded-md ${
-              input.trim() && !isLoading ? 'text-blue-500 hover:bg-gray-700' : 'text-gray-500'
+              input.trim() && !isLoading && (auth.currentUser || anonymousMessageCount < ANONYMOUS_MESSAGE_LIMIT) ? 'text-blue-500 hover:bg-gray-700' : 'text-gray-500'
             } transition-colors`}
           >
             <SendHorizontal size={20} />
