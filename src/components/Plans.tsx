@@ -12,7 +12,7 @@ const plans = [
     tokens: 100,
     price: 0,
     highlight: false,
-    successUrl: ''
+    href: ''
   },
   {
     id: 'jedi',
@@ -22,7 +22,7 @@ const plans = [
     tokens: 1000,
     price: 600,
     highlight: true,
-    successUrl: '/j8k2m9n4p5q7r3s6t1v8w2x'
+    href: 'https://buy.stripe.com/28o02b9gT77u1XO14r'
   },
   {
     id: 'mestre-jedi',
@@ -32,7 +32,7 @@ const plans = [
     tokens: 3000,
     price: 1800,
     highlight: false,
-    successUrl: '/h5g9f3d7c1b4n8m2k6l9p4q'
+    href: 'https://buy.stripe.com/5kA3en0Kn3Vi7i8eVg'
   },
   {
     id: 'mestre-yoda',
@@ -42,7 +42,7 @@ const plans = [
     tokens: 11000,
     price: 6000,
     highlight: false,
-    successUrl: '/w2x6y9z4a7b1c5d8e3f2g4h'
+    href: 'https://buy.stripe.com/bIY2ajgJlajGdGw28t'
   }
 ];
 
@@ -75,7 +75,7 @@ const Plans = () => {
 
       setIsRedirecting(true);
       setTimeout(() => {
-        navigate(selectedPlan.successUrl);
+        window.location.href = selectedPlan.href;
       }, 2000);
     } catch (error) {
       setError('Erro ao selecionar plano. Tente novamente.');

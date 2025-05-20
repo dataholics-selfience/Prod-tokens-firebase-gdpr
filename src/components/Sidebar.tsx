@@ -67,6 +67,12 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
     fetchTokenUsage();
   }, []);
 
+  // Updated to show all folders expanded by default
+  useEffect(() => {
+    const dates = Object.keys(groupedChallenges);
+    setExpandedFolders(dates);
+  }, [groupedChallenges]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);

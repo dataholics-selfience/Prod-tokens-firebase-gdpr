@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserType, TokenUsageType } from '../types';
+import TokenUsageChart from './TokenUsageChart';
 
 interface UserProfileProps {
   hideText?: boolean;
@@ -43,24 +45,19 @@ const UserProfile = ({ hideText = false }: UserProfileProps) => {
     .slice(0, 2);
 
   return (
-    <div className="flex items-center space-x-3">
-      <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold shadow-lg hover:bg-blue-800 transition-colors cursor-pointer">
+    <Link to="/profile" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+      <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold shadow-lg">
         {initials}
       </div>
-      {!hideText && (
-        <div>
-          <div className="text-sm font-medium">{userData.name.split(' ')[0]}</div>
-          <div className="text-xs">
-            <span className="text-gray-400">{userData.plan || 'Padawan'}</span>
-            {tokenUsage && (
-              <span className="text-blue-400 ml-2">
-                {tokenUsage.totalTokens - tokenUsage.usedTokens} tokens
-              </span>
-            )}
-          </div>
+      {!hideText && tokenUsage && (
+        <div className="flex-1">
+          <TokenUsageChart
+            totalTokens={tokenUsage.totalTokens}
+            usedTokens={tokenUsage.usedTokens}
+          />
         </div>
       )}
-    </div>
+    </Link>
   );
 };
 
