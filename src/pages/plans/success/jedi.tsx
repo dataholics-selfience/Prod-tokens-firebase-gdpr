@@ -14,6 +14,12 @@ export default function JediSuccess() {
         setTimeout(() => navigate('/'), 2000);
       } catch (err) {
         console.error('Error activating plan:', err);
+        if (err instanceof Error && err.message === 'account_deleted') {
+          navigate('/account-deleted', { 
+            state: { email: auth.currentUser?.email } 
+          });
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Erro ao ativar plano');
       } finally {
         setLoading(false);

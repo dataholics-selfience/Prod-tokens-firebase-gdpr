@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handlePlanSuccess } from '../../../utils/handlePlanSuccess';
+import { auth } from '../../../firebase';
 
 export default function MestreJediSuccess() {
   const [error, setError] = useState('');
@@ -14,6 +15,12 @@ export default function MestreJediSuccess() {
         setTimeout(() => navigate('/'), 2000);
       } catch (err) {
         console.error('Error activating plan:', err);
+        if (err instanceof Error && err.message === 'account_deleted') {
+          navigate('/account-deleted', { 
+            state: { email: auth.currentUser?.email } 
+          });
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Erro ao ativar plano');
       } finally {
         setLoading(false);
