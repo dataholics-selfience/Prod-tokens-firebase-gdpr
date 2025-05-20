@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Baby, Swords, SwordIcon, Sparkles, ArrowLeft, Shield, Lock } from 'lucide-react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
 
 const plans = [
   {
@@ -12,7 +13,7 @@ const plans = [
     tokens: 100,
     price: 0,
     highlight: false,
-    href: ''
+    stripeLink: ''
   },
   {
     id: 'jedi',
@@ -22,7 +23,7 @@ const plans = [
     tokens: 1000,
     price: 600,
     highlight: true,
-    href: '/plans/success/jedi'
+    stripeLink: import.meta.env.VITE_PLAN_JEDI_URL
   },
   {
     id: 'mestre-jedi',
@@ -32,7 +33,7 @@ const plans = [
     tokens: 3000,
     price: 1800,
     highlight: false,
-    href: '/plans/success/mestrejedi'
+    stripeLink: import.meta.env.VITE_PLAN_MESTRE_JEDI_URL
   },
   {
     id: 'mestre-yoda',
@@ -42,7 +43,7 @@ const plans = [
     tokens: 11000,
     price: 6000,
     highlight: false,
-    href: '/plans/success/mestreyoda'
+    stripeLink: import.meta.env.VITE_PLAN_MESTRE_YODA_URL
   }
 ];
 
@@ -57,15 +58,32 @@ const Plans = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
-  const handleSelectPlan = async (planId: string) => {
+  const handlePlanClick = async (plan: typeof plans[0]) => {
     if (!auth.currentUser) {
       navigate('/login');
       return;
     }
 
-    if (planId === 'padawan') {
+    if (plan.id === 'padawan') {
       setError('O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.');
       return;
+    }
+
+    try {
+      // Record plan click in Firestore
+      await setDoc(doc(collection(db, 'planClicks'), crypto.randomUUID()), {
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email,
+        planId: plan.id,
+        clickedAt: new Date().toISOString(),
+        transactionId: crypto.randomUUID()
+      });
+
+      // Redirect to Stripe
+      window.location.href = plan.stripeLink;
+    } catch (error) {
+      console.error('Error recording plan click:', error);
+      setError('Erro ao processar sua solicitação. Por favor, tente novamente.');
     }
   };
 
@@ -131,12 +149,12 @@ const Plans = () => {
                     <span>Plano inicial</span>
                   </button>
                 ) : (
-                  <Link
-                    to={plan.href}
+                  <button
+                    onClick={() => handlePlanClick(plan)}
                     className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-blue-600 hover:bg-blue-700 transition-colors"
                   >
                     <span>Começar agora</span>
-                  </Link>
+                  </button>
                 )}
               </div>
             );
