@@ -46,19 +46,20 @@ const UserProfile = ({ hideText = false }: UserProfileProps) => {
   const firstName = userData.name.split(' ')[0];
 
   return (
-    <Link to="/profile" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+    <div className="flex items-center space-x-3">
       <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold shadow-lg">
         {initials}
       </div>
       {!hideText && tokenUsage && (
         <div className="flex flex-col">
           <span className="text-sm font-medium text-gray-300">{firstName}</span>
-          <span className="text-xs text-gray-400">
-            {tokenUsage.totalTokens - tokenUsage.usedTokens}/{tokenUsage.totalTokens}
+          <span className="text-xs">
+            <span className="text-blue-400">{tokenUsage.totalTokens - tokenUsage.usedTokens}</span>
+            <span className="text-gray-400"> de {tokenUsage.totalTokens} tokens</span>
           </span>
         </div>
       )}
-    </Link>
+    </div>
   );
 };
 
