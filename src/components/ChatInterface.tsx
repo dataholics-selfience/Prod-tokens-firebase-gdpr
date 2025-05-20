@@ -64,20 +64,13 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         localStorage.setItem('anonymousMessageCount', newCount.toString());
 
         if (newCount >= ANONYMOUS_MESSAGE_LIMIT) {
+          await addMessage({
+            role: 'assistant',
+            content: 'Você atingiu o limite de mensagens para usuários anônimos. Crie uma conta gratuita para continuar conversando!\n\n<login-prompt>'
+          });
           setShowLoginPrompt(true);
           setIsLoading(false);
           return;
-        }
-
-        // Create public user if doesn't exist
-        const publicUserId = localStorage.getItem('publicUserId') || crypto.randomUUID();
-        if (!localStorage.getItem('publicUserId')) {
-          await addDoc(collection(db, 'users'), {
-            uid: publicUserId,
-            role: 'public',
-            createdAt: new Date().toISOString()
-          });
-          localStorage.setItem('publicUserId', publicUserId);
         }
       }
 
