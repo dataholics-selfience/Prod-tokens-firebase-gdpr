@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, FolderClosed, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, X, FolderClosed, FolderOpen, Rocket } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import UserProfile from './UserProfile';
-import { ChallengeType, StartupListType, TokenUsageType } from '../types';
-import { format, formatDistanceToNow } from 'date-fns';
+import { ChallengeType, StartupListType } from '../types';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface SidebarProps {
@@ -19,19 +19,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSelectChallenge }: SidebarProps) => {
   const navigate = useNavigate();
-  const [pulseCount, setPulseCount] = useState(0);
   const [challengeStartups, setChallengeStartups] = useState<Record<string, StartupListType[]>>({});
-  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsageType | null>(null);
-  const [groupedChallenges, setGroupedChallenges] = useState<Record<string, ChallengeType[]>>({});
-
-  useEffect(() => {
-    if (pulseCount >= 5) return;
-    const interval = setInterval(() => {
-      setPulseCount(prev => prev + 1);
-    }, 180000);
-    return () => clearInterval(interval);
-  }, [pulseCount]);
 
   useEffect(() => {
     const fetchStartupLists = async () => {
@@ -52,40 +40,6 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
     fetchStartupLists();
   }, [challenges]);
 
-  useEffect(() => {
-    const fetchTokenUsage = async () => {
-      if (!auth.currentUser) return;
-      try {
-        const tokenDoc = await getDoc(doc(db, 'tokenUsage', auth.currentUser.uid));
-        if (tokenDoc.exists()) {
-          setTokenUsage(tokenDoc.data() as TokenUsageType);
-        }
-      } catch (error) {
-        console.error('Error fetching token usage:', error);
-      }
-    };
-
-    fetchTokenUsage();
-  }, []);
-
-  useEffect(() => {
-    const grouped = challenges.reduce((groups, challenge) => {
-      const date = formatDate(challenge.createdAt);
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(challenge);
-      return groups;
-    }, {} as Record<string, ChallengeType[]>);
-    
-    setGroupedChallenges(grouped);
-  }, [challenges]);
-
-  useEffect(() => {
-    const dates = Object.keys(groupedChallenges);
-    setExpandedFolders(dates);
-  }, [groupedChallenges]);
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -94,31 +48,8 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
     }
   };
 
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => 
-      prev.includes(folderId) 
-        ? prev.filter(id => id !== folderId)
-        : [...prev, folderId]
-    );
-  };
-
   const formatDate = (date: string) => {
-    const now = new Date();
     const challengeDate = new Date(date);
-    const distance = formatDistanceToNow(challengeDate, { locale: ptBR, addSuffix: true });
-    
-    if (challengeDate.toDateString() === now.toDateString()) {
-      return 'Hoje';
-    }
-    
-    if (challengeDate.toDateString() === new Date(now.setDate(now.getDate() - 1)).toDateString()) {
-      return 'Ontem';
-    }
-    
-    if (now.getMonth() === challengeDate.getMonth()) {
-      return 'Esta semana';
-    }
-    
     return format(challengeDate, "MMMM 'de' yyyy", { locale: ptBR });
   };
 
@@ -164,71 +95,45 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
           </div>
 
           <nav className="px-3">
-            {Object.entries(groupedChallenges).map(([date, dateGroup]) => (
-              <div key={date} className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
+            {challenges.map((challenge) => {
+              const isActive = currentChallengeId === challenge.id;
+              const startups = challengeStartups[challenge.id] || [];
+              
+              return (
+                <div key={challenge.id} className="mb-2">
                   <button
-                    onClick={() => toggleFolder(date)}
-                    className="flex items-center text-xs text-gray-500"
+                    onClick={() => onSelectChallenge(challenge.id)}
+                    className={`w-full flex flex-col text-sm p-2 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40 text-white'
+                        : 'text-gray-400 hover:bg-gray-900 hover:text-white'
+                    }`}
                   >
-                    {expandedFolders.includes(date) ? (
-                      <ChevronDown size={14} />
-                    ) : (
-                      <ChevronRight size={14} />
-                    )}
-                    {date}
+                    <div className="flex items-center gap-2">
+                      {isActive ? (
+                        <FolderOpen size={14} className="text-blue-400" />
+                      ) : (
+                        <FolderClosed size={14} className="text-gray-500" />
+                      )}
+                      <span className="truncate text-left flex-1">{challenge.title}</span>
+                      {startups.length > 0 && (
+                        <Rocket size={14} className="text-gray-500" />
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 pl-6 mt-1">
+                      {formatDate(challenge.createdAt)}
+                    </div>
                   </button>
                 </div>
-
-                {expandedFolders.includes(date) && (
-                  <div className="space-y-1">
-                    {dateGroup.map((challenge) => {
-                      const isActive = currentChallengeId === challenge.id;
-                      const startups = challengeStartups[challenge.id] || [];
-                      
-                      return (
-                        <div key={challenge.id} className="pl-4">
-                          <button
-                            onClick={() => onSelectChallenge(challenge.id)}
-                            className={`w-full flex flex-col text-sm p-2 rounded-lg transition-all ${
-                              isActive
-                                ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40 text-white'
-                                : 'text-gray-400 hover:bg-gray-900 hover:text-white'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              {isActive ? (
-                                <FolderOpen size={14} className="text-blue-400" />
-                              ) : (
-                                <FolderClosed size={14} className="text-gray-500" />
-                              )}
-                              <span className="truncate text-left flex-1">{challenge.title}</span>
-                            </div>
-                            {startups.length > 0 && (
-                              <div className="text-xs text-gray-500 pl-6 mt-1">
-                                {startups.length} startup{startups.length > 1 ? 's' : ''} indicada{startups.length > 1 ? 's' : ''}
-                              </div>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </nav>
         </div>
 
         <div className="p-4 border-t border-gray-800">
           <div className="flex justify-between items-center">
-            <Link to="/profile" className="flex items-center gap-2">
-              <UserProfile hideText={true} />
-              {tokenUsage && (
-                <span className="text-sm text-gray-400">
-                  {tokenUsage.totalTokens - tokenUsage.usedTokens} de {tokenUsage.totalTokens} tokens
-                </span>
-              )}
+            <Link to="/profile">
+              <UserProfile hideText={false} />
             </Link>
             <button
               onClick={handleLogout}
