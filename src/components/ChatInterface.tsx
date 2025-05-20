@@ -278,7 +278,6 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   };
 
   const handleInputClick = () => {
-    // Allow input interaction regardless of challenge selection or authentication status
     if (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT) {
       setShowLoginPrompt(true);
     }
