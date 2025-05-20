@@ -22,7 +22,7 @@ const plans = [
     tokens: 1000,
     price: 600,
     highlight: true,
-    href: 'https://buy.stripe.com/28o02b9gT77u1XO14r'
+    href: '/plans/success/jedi'
   },
   {
     id: 'mestre-jedi',
@@ -32,7 +32,7 @@ const plans = [
     tokens: 3000,
     price: 1800,
     highlight: false,
-    href: 'https://buy.stripe.com/5kA3en0Kn3Vi7i8eVg'
+    href: '/plans/success/mestrejedi'
   },
   {
     id: 'mestre-yoda',
@@ -42,7 +42,7 @@ const plans = [
     tokens: 11000,
     price: 6000,
     highlight: false,
-    href: 'https://buy.stripe.com/bIY2ajgJlajGdGw28t'
+    href: '/plans/success/mestreyoda'
   }
 ];
 
@@ -131,14 +131,12 @@ const Plans = () => {
                     <span>Plano inicial</span>
                   </button>
                 ) : (
-                  <a
-                    href={plan.href}
+                  <Link
+                    to={plan.href}
                     className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-blue-600 hover:bg-blue-700 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
                   >
                     <span>Começar agora</span>
-                  </a>
+                  </Link>
                 )}
               </div>
             );
