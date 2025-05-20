@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserType, TokenUsageType } from '../types';
@@ -47,7 +46,7 @@ const UserProfile = ({ hideText = false }: UserProfileProps) => {
 
   return (
     <div className="flex items-center space-x-3">
-      <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold shadow-lg">
+      <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold">
         {initials}
       </div>
       {!hideText && tokenUsage && (
