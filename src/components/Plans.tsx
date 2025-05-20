@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Baby, Swords, SwordIcon, Sparkles, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { auth, db } from '../firebase';
@@ -23,7 +23,7 @@ const plans = [
     tokens: 1000,
     price: 600,
     highlight: true,
-    stripeLink: import.meta.env.VITE_PLAN_JEDI_URL
+    stripeLink: 'https://buy.stripe.com/28o02b9gT77u1XO14r'
   },
   {
     id: 'mestre-jedi',
@@ -33,7 +33,7 @@ const plans = [
     tokens: 3000,
     price: 1800,
     highlight: false,
-    stripeLink: import.meta.env.VITE_PLAN_MESTRE_JEDI_URL
+    stripeLink: 'https://buy.stripe.com/5kA3en0Kn3Vi7i8eVg'
   },
   {
     id: 'mestre-yoda',
@@ -43,7 +43,7 @@ const plans = [
     tokens: 11000,
     price: 6000,
     highlight: false,
-    stripeLink: import.meta.env.VITE_PLAN_MESTRE_YODA_URL
+    stripeLink: 'https://buy.stripe.com/bIY2ajgJlajGdGw28t'
   }
 ];
 
@@ -105,7 +105,9 @@ const Plans = () => {
         </div>
 
         {error && (
-          <div className="text-red-500 text-center mb-4">{error}</div>
+          <div className="text-red-500 text-center mb-4 bg-red-900/20 p-4 rounded-lg">
+            {error}
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
