@@ -16,6 +16,7 @@ import StartupList from './components/StartupList';
 import JediSuccess from './pages/plans/success/jedi';
 import MestreJediSuccess from './pages/plans/success/mestrejedi';
 import MestreYodaSuccess from './pages/plans/success/mestreyoda';
+import Terms from './components/Terms';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -68,11 +69,10 @@ function App() {
         <Route path="/plans/success/jedi" element={<JediSuccess />} />
         <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
         <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/" element={<Layout />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
 }
-
-export default App;

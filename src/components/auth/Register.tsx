@@ -210,7 +210,19 @@ const Register = () => {
                 required
               />
               <label className="ml-2 block text-sm text-gray-300">
-                Li e aceito os termos de uso
+                Li e aceito os{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open('/terms', '_blank', 'width=800,height=800');
+                  }}
+                >
+                  termos de uso
+                </a>
               </label>
             </div>
           </div>
