@@ -36,6 +36,15 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (messages.length === 0) {
+      addMessage({
+        role: 'assistant',
+        content: '👋 Olá, sou a Genie, sua agente IA especializada. Descreva abaixo qual é seu desafio que irei encontrar as melhores startups para resolvê-lo! 🚀'
+      });
+    }
+  }, [messages, addMessage]);
+
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -383,61 +392,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             <Menu size={24} />
           </button>
           <div className="flex items-center gap-2 flex-1 ml-4">
-            <FolderOpen size={20} className="text-gray-400" />
-            {isEditing ? (
-              <form onSubmit={handleEditSubmit} className="flex-1 space-y-2">
-                <input
-                  type="text"
-                  value={editData.title}
-                  onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-1 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Título do desafio"
-                />
-                <textarea
-                  value={editData.description}
-                  onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-1 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Descrição do desafio"
-                  rows={2}
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex items-center justify-between flex-1">
-                <div className="flex items-center gap-4">
-                  <h2 className="text-lg font-medium">{currentChallenge?.title || 'Chat Público'}</h2>
-                  {currentChallenge && auth.currentUser && (
-                    <button
-                      onClick={() => {
-                        setEditData({
-                          title: currentChallenge?.title || '',
-                          description: currentChallenge?.description || ''
-                        });
-                        setIsEditing(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-white rounded-full hover:bg-gray-800 transition-colors"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                  )}
-                </div>
-                <StartupListIcons challengeId={currentChallenge?.id} />
-              </div>
-            )}
+            <h2 className="text-lg font-medium">Gen.OI, sua agente IA para inovação aberta com base de milhares de startups</h2>
           </div>
         </div>
       </div>
