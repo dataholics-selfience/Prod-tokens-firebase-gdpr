@@ -56,51 +56,18 @@ const SecurityBadge = ({ icon: Icon, text }: { icon: any; text: string }) => (
 const Plans = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleSelectPlan = async (planId: string) => {
-    try {
-      if (!auth.currentUser) {
-        navigate('/login');
-        return;
-      }
+    if (!auth.currentUser) {
+      navigate('/login');
+      return;
+    }
 
-      const selectedPlan = plans.find(p => p.id === planId);
-      if (!selectedPlan) return;
-
-      if (planId === 'padawan') {
-        setError('O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.');
-        return;
-      }
-
-      setIsRedirecting(true);
-      setTimeout(() => {
-        window.location.href = selectedPlan.href;
-      }, 2000);
-    } catch (error) {
-      setError('Erro ao selecionar plano. Tente novamente.');
-      setIsRedirecting(false);
+    if (planId === 'padawan') {
+      setError('O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.');
+      return;
     }
   };
-
-  if (isRedirecting) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-        <div className="max-w-md w-full p-8 rounded-xl bg-gradient-to-br from-gray-900 to-gray-800">
-          <div className="text-center space-y-6">
-            <div className="animate-spin mx-auto w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full" />
-            <h2 className="text-2xl font-bold text-white">Redirecionando para ambiente seguro</h2>
-            <p className="text-gray-400">Aguarde, você está sendo direcionado para um ambiente de pagamento seguro.</p>
-            
-            <div className="space-y-4 pt-6">
-              <SecurityBadge icon={Shield} text="Pagamento Criptografado SSL/TLS" />
-              <SecurityBadge icon={Lock} text="Certificado de Segurança Stripe" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black p-8">
@@ -156,18 +123,23 @@ const Plans = () => {
                   <div className="text-blue-400">{plan.tokens} tokens</div>
                 </div>
 
-                <button
-                  onClick={() => handleSelectPlan(plan.id)}
-                  disabled={isPadawan}
-                  className={`block w-full py-3 px-4 rounded-lg text-white text-center font-bold transition-colors flex items-center justify-center gap-2 ${
-                    isPadawan 
-                      ? 'bg-gray-600 cursor-not-allowed opacity-50' 
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  <SwordIcon size={20} />
-                  <span>{isPadawan ? 'Plano inicial' : 'Começar agora'}</span>
-                </button>
+                {isPadawan ? (
+                  <button
+                    disabled
+                    className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-gray-600 cursor-not-allowed opacity-50"
+                  >
+                    <span>Plano inicial</span>
+                  </button>
+                ) : (
+                  <a
+                    href={plan.href}
+                    className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-blue-600 hover:bg-blue-700 transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span>Começar agora</span>
+                  </a>
+                )}
               </div>
             );
           })}
