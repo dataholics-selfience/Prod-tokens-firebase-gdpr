@@ -227,3 +227,5 @@ const NewChallenge = () => {
 };
 
 export default NewChallenge;
+
+export default NewChallenge
