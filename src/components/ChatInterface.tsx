@@ -36,11 +36,6 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   const handleInputClick = () => {
     if (!currentChallenge) {
       navigate('/new-challenge');
-      return;
-    }
-
-    if (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT) {
-      setShowLoginPrompt(true);
     }
   };
 
@@ -63,11 +58,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         setAnonymousMessageCount(newCount);
         localStorage.setItem('anonymousMessageCount', newCount.toString());
 
-        if (newCount >= ANONYMOUS_MESSAGE_LIMIT) {
-          await addMessage({
-            role: 'assistant',
-            content: 'Você atingiu o limite de mensagens para usuários anônimos. Crie uma conta gratuita para continuar conversando!\n\n<login-prompt>'
-          });
+        if (newCount > ANONYMOUS_MESSAGE_LIMIT) {
           setShowLoginPrompt(true);
           setIsLoading(false);
           return;
@@ -95,6 +86,14 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       const data = await response.json();
       if (data[0]?.output) {
         await addMessage({ role: 'assistant', content: data[0].output });
+      }
+
+      if (!auth.currentUser && newCount === ANONYMOUS_MESSAGE_LIMIT) {
+        await addMessage({
+          role: 'assistant',
+          content: 'Você atingiu o limite de mensagens gratuitas. Crie uma conta para continuar conversando!\n\n<login-prompt>'
+        });
+        setShowLoginPrompt(true);
       }
 
     } catch (error) {
@@ -131,12 +130,20 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       return (
         <div className="space-y-4">
           <p>{message.content.split('<login-prompt>')[0]}</p>
-          <Link
-            to="/register"
-            className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
-          >
-            Criar conta grátis
-          </Link>
+          <div className="flex gap-4">
+            <Link
+              to="/register"
+              className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-center font-bold"
+            >
+              Criar conta
+            </Link>
+            <Link
+              to="/login"
+              className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-center font-bold"
+            >
+              Fazer login
+            </Link>
+          </div>
         </div>
       );
     }
@@ -153,7 +160,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
           <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full space-y-4">
             <h2 className="text-2xl font-bold text-white text-center">Limite de mensagens atingido</h2>
             <p className="text-gray-300 text-center">
-              Você atingiu o limite de mensagens para usuários anônimos. Crie uma conta gratuita para continuar conversando!
+              Você atingiu o limite de mensagens gratuitas. Crie uma conta para continuar conversando!
             </p>
             <div className="flex gap-4">
               <Link
