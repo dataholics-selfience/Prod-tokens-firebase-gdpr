@@ -42,16 +42,15 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     }
   }, []);
 
-  const handleAnonymousMessage = async () => {
-    const newCount = anonymousMessageCount + 1;
-    setAnonymousMessageCount(newCount);
-    localStorage.setItem('anonymousMessageCount', newCount.toString());
-
-    if (newCount >= ANONYMOUS_MESSAGE_LIMIT) {
-      setShowLoginPrompt(true);
-      return false;
+  const handleInputClick = () => {
+    if (!currentChallenge) {
+      navigate('/new-challenge');
+      return;
     }
-    return true;
+
+    if (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT) {
+      setShowLoginPrompt(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,13 +58,22 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
+    if (!currentChallenge) {
+      navigate('/new-challenge');
+      return;
+    }
+
     setInput('');
     setIsLoading(true);
 
     try {
       if (!auth.currentUser) {
-        const canContinue = await handleAnonymousMessage();
-        if (!canContinue) {
+        const newCount = anonymousMessageCount + 1;
+        setAnonymousMessageCount(newCount);
+        localStorage.setItem('anonymousMessageCount', newCount.toString());
+
+        if (newCount >= ANONYMOUS_MESSAGE_LIMIT) {
+          setShowLoginPrompt(true);
           setIsLoading(false);
           return;
         }
@@ -91,7 +99,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmedInput,
-          sessionId: currentChallenge?.sessionId || 'anonymous',
+          sessionId: currentChallenge.sessionId,
           isAnonymous: !auth.currentUser
         })
       });
@@ -120,12 +128,6 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
-    }
-  };
-
-  const handleInputClick = () => {
-    if (!auth.currentUser && anonymousMessageCount >= ANONYMOUS_MESSAGE_LIMIT) {
-      setShowLoginPrompt(true);
     }
   };
 
