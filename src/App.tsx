@@ -68,17 +68,7 @@ function App() {
         <Route path="/plans/success/jedi" element={<JediSuccess />} />
         <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
         <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
-        <Route path="/" element={
-          user ? (
-            user.emailVerified ? (
-              <Layout />
-            ) : (
-              <Navigate to="/verify-email" replace />
-            )
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } />
+        <Route path="/" element={<Layout />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
