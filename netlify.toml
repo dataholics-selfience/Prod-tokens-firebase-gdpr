@@ -3,19 +3,7 @@
   command = "npm run build"
 
 [[redirects]]
-  from = "/j8k2m9n4p5q7r3s6t1v8w2x"
-  to = "/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/h5g9f3d7c1b4n8m2k6l9p4q"
-  to = "/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/w2x6y9z4a7b1c5d8e3f2g4h"
+  from = "/success/*"
   to = "/index.html"
   status = 200
   force = true

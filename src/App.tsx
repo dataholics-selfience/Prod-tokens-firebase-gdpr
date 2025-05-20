@@ -13,9 +13,7 @@ import Plans from './components/Plans';
 import EmailVerification from './components/auth/EmailVerification';
 import AccountDeleted from './components/AccountDeleted';
 import StartupList from './components/StartupList';
-import JediSuccess from './components/plans/JediSuccess';
-import MestreJediSuccess from './components/plans/MestreJediSuccess';
-import MestreYodaSuccess from './components/plans/MestreYodaSuccess';
+import PlanSuccess from './components/PlanSuccess';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -65,12 +63,7 @@ function App() {
         <Route path="/plans" element={<Plans />} />
         <Route path="/startups" element={user?.emailVerified ? <StartupList /> : <Navigate to="/verify-email" replace />} />
         <Route path="/account-deleted" element={<AccountDeleted />} />
-        
-        {/* Plan success routes */}
-        <Route path="j8k2m9n4p5q7r3s6t1v8w2x" element={<JediSuccess />} />
-        <Route path="h5g9f3d7c1b4n8m2k6l9p4q" element={<MestreJediSuccess />} />
-        <Route path="w2x6y9z4a7b1c5d8e3f2g4h" element={<MestreYodaSuccess />} />
-        
+        <Route path="/success/:planId" element={<PlanSuccess />} />
         <Route path="/" element={
           user ? (
             user.emailVerified ? (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 // Map of plan IDs to their corresponding names and token amounts
