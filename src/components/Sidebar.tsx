@@ -69,7 +69,6 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
   }, []);
 
   useEffect(() => {
-    // Group challenges by date
     const grouped = challenges.reduce((groups, challenge) => {
       const date = formatDate(challenge.createdAt);
       if (!groups[date]) {
@@ -82,7 +81,6 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
     setGroupedChallenges(grouped);
   }, [challenges]);
 
-  // Updated to show all folders expanded by default
   useEffect(() => {
     const dates = Object.keys(groupedChallenges);
     setExpandedFolders(dates);
@@ -122,27 +120,6 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
     }
     
     return format(challengeDate, "MMMM 'de' yyyy", { locale: ptBR });
-  };
-
-  const renderTokenUsage = () => {
-    if (!tokenUsage) return null;
-
-    const percentage = (tokenUsage.usedTokens / tokenUsage.totalTokens) * 100;
-    const remainingTokens = tokenUsage.totalTokens - tokenUsage.usedTokens;
-
-    return (
-      <div className="px-3 py-2">
-        <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-blue-500 rounded-full transition-all duration-300"
-            style={{ width: `${100 - percentage}%` }}
-          />
-        </div>
-        <div className="mt-1 text-xs text-gray-400 text-center">
-          {remainingTokens} de {tokenUsage.totalTokens} tokens
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -243,10 +220,16 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
           </nav>
         </div>
 
-        <div className="p-4 border-t border-gray-800 space-y-3">
-          {renderTokenUsage()}
+        <div className="p-4 border-t border-gray-800">
           <div className="flex justify-between items-center">
-            <UserProfile hideText={false} />
+            <Link to="/profile" className="flex items-center gap-2">
+              <UserProfile hideText={true} />
+              {tokenUsage && (
+                <span className="text-sm text-gray-400">
+                  {tokenUsage.totalTokens - tokenUsage.usedTokens} de {tokenUsage.totalTokens} tokens
+                </span>
+              )}
+            </Link>
             <button
               onClick={handleLogout}
               className="text-sm text-gray-400 hover:text-white transition-colors"
