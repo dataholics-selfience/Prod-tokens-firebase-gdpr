@@ -49,13 +49,18 @@ const UserProfile = ({ hideText = false }: UserProfileProps) => {
       <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white font-semibold">
         {initials}
       </div>
-      {!hideText && tokenUsage && (
+      {!hideText && (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-300">{firstName}</span>
-          <span className="text-xs">
-            <span className="text-blue-400">{tokenUsage.totalTokens - tokenUsage.usedTokens}</span>
-            <span className="text-gray-400"> de {tokenUsage.totalTokens} tokens</span>
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-300">{firstName}</span>
+            <span className="text-xs text-gray-400">({userData.plan || 'Padawan'})</span>
+          </div>
+          {tokenUsage && (
+            <div className="text-xs">
+              <span className="text-blue-400">{tokenUsage.totalTokens - tokenUsage.usedTokens}</span>
+              <span className="text-gray-400"> de {tokenUsage.totalTokens} tokens</span>
+            </div>
+          )}
         </div>
       )}
     </div>
