@@ -143,10 +143,18 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       setInput('');
       setIsLoading(true);
       
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+        inputRef.current.disabled = true;
+      }
+
       try {
         const hasTokens = await checkAndUpdateTokens(MESSAGE_TOKEN_COST);
         if (!hasTokens) {
           setIsLoading(false);
+          if (inputRef.current) {
+            inputRef.current.disabled = false;
+          }
           return;
         }
 
@@ -162,9 +170,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
 
         const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: messageToSend,
             sessionId: currentChallenge.sessionId,
@@ -189,6 +195,9 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             const hasEnoughTokens = await checkAndUpdateTokens(STARTUP_LIST_TOKEN_COST);
             if (!hasEnoughTokens) {
               setIsLoading(false);
+              if (inputRef.current) {
+                inputRef.current.disabled = false;
+              }
               return;
             }
 
@@ -230,6 +239,9 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
           clearTimeout(responseTimer.current);
         }
         setResponseDelay(0);
+        if (inputRef.current) {
+          inputRef.current.disabled = false;
+        }
       }
     }
   };

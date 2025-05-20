@@ -48,9 +48,13 @@ export const LoadingStates = () => {
   const CurrentIcon = loadingStates[currentState].icon;
 
   return (
-    <div className="flex items-center gap-3 bg-gray-800/50 p-4 rounded-lg">
-      <CurrentIcon className={`w-6 h-6 ${loadingStates[currentState].color} animate-pulse`} />
-      <span className="text-gray-300">{loadingStates[currentState].text}</span>
+    <div className="flex items-center gap-4 bg-gray-800/50 p-6 rounded-lg transform transition-all duration-500 animate-fade-in">
+      <CurrentIcon 
+        className={`w-8 h-8 ${loadingStates[currentState].color} animate-pulse transform transition-all duration-500 scale-110`} 
+      />
+      <span className="text-lg text-gray-300 animate-fade-in transition-all duration-500">
+        {loadingStates[currentState].text}
+      </span>
     </div>
   );
 };
