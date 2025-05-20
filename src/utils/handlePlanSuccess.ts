@@ -17,12 +17,12 @@ export async function handlePlanSuccess(plan: Plan) {
   const planInfo = planData[plan];
   if (!planInfo) throw new Error("Plano inválido");
 
-  // Check if user has already hired this plan
+  // Check if user has already accessed this specific plan's success page
   const planHiredRef = doc(db, 'planHired', user.uid);
   const planHiredDoc = await getDoc(planHiredRef);
 
-  if (planHiredDoc.exists()) {
-    // User has already hired a plan - handle potential fraud
+  if (planHiredDoc.exists() && planHiredDoc.data().planId === plan) {
+    // User is trying to access the same plan's success page again - handle fraud
     const userData = await getDoc(doc(db, 'users', user.uid));
     const transactionId = crypto.randomUUID();
     
@@ -55,6 +55,13 @@ export async function handlePlanSuccess(plan: Plan) {
       deletedAt: new Date().toISOString(),
       reason: 'potential_fraud',
       transactionId
+    });
+
+    // Update user document as disabled
+    await updateDoc(doc(db, 'users', user.uid), {
+      disabled: true,
+      disabledAt: new Date().toISOString(),
+      disabledReason: 'potential_fraud'
     });
 
     // Delete user account
