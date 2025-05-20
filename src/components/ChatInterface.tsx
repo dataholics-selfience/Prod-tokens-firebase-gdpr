@@ -16,11 +16,12 @@ interface ChatInterfaceProps {
 
 const MESSAGE_TOKEN_COST = 3;
 const STARTUP_LIST_TOKEN_COST = 30;
+const ANONYMOUS_MESSAGE_LIMIT = 3;
 
 const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, currentChallenge }: ChatInterfaceProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [userInitials, setUserInitials] = useState('');
+  const [userInitials, setUserInitials] = useState('AN');
   const [tokenUsage, setTokenUsage] = useState<TokenUsageType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -28,8 +29,9 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     description: ''
   });
   const [responseDelay, setResponseDelay] = useState<number>(0);
+  const [anonymousMessageCount, setAnonymousMessageCount] = useState(0);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const responseTimer = useRef<NodeJS.Timeout>();
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -45,32 +47,38 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   }, [messages, isLoading]);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!auth.currentUser) return;
-      
-      try {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        const userData = userDoc.data();
-        if (userData?.name) {
-          const initials = userData.name
-            .split(' ')
-            .map((n: string) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-          setUserInitials(initials);
-        }
+    const count = localStorage.getItem('anonymousMessageCount');
+    if (count) {
+      setAnonymousMessageCount(parseInt(count));
+    }
 
-        const tokenDoc = await getDoc(doc(db, 'tokenUsage', auth.currentUser.uid));
-        if (tokenDoc.exists()) {
-          setTokenUsage(tokenDoc.data() as TokenUsageType);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
+    if (auth.currentUser) {
+      const fetchUserData = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+          const userData = userDoc.data();
+          if (userData?.name) {
+            const initials = userData.name
+              .split(' ')
+              .map((n: string) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2);
+            setUserInitials(initials);
+          }
 
-    fetchUserData();
+          const tokenDoc = await getDoc(doc(db, 'tokenUsage', auth.currentUser.uid));
+          if (tokenDoc.exists()) {
+            setTokenUsage(tokenDoc.data() as TokenUsageType);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      };
+      fetchUserData();
+    } else {
+      setUserInitials('AN');
+    }
   }, []);
 
   const checkAndUpdateTokens = async (cost: number): Promise<boolean> => {
@@ -131,67 +139,85 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     }
   };
 
+  const handleAnonymousMessage = async () => {
+    const newCount = anonymousMessageCount + 1;
+    setAnonymousMessageCount(newCount);
+    localStorage.setItem('anonymousMessageCount', newCount.toString());
+
+    if (newCount >= ANONYMOUS_MESSAGE_LIMIT) {
+      setShowLoginPrompt(true);
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent, overrideMessage?: string) => {
     e.preventDefault();
-    if (!currentChallenge || !auth.currentUser) {
-      navigate('/new-challenge');
-      return;
-    }
     
     const messageToSend = overrideMessage || input.trim();
-    if (messageToSend && !isLoading) {
-      setInput('');
-      setIsLoading(true);
-      
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto';
-        inputRef.current.disabled = true;
-      }
+    if (!messageToSend || isLoading) return;
 
-      try {
-        const hasTokens = await checkAndUpdateTokens(MESSAGE_TOKEN_COST);
-        if (!hasTokens) {
+    setInput('');
+    setIsLoading(true);
+
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.disabled = true;
+    }
+
+    try {
+      if (!auth.currentUser) {
+        const canContinue = await handleAnonymousMessage();
+        if (!canContinue) {
           setIsLoading(false);
           if (inputRef.current) {
             inputRef.current.disabled = false;
           }
           return;
         }
+      }
 
-        if (!overrideMessage) {
-          await addMessage({ role: 'user', content: messageToSend });
-          scrollToBottom();
-        }
-        
-        responseTimer.current = setTimeout(() => {
-          setResponseDelay(prev => prev + 1);
-          scrollToBottom();
-        }, 3000);
+      if (!overrideMessage) {
+        await addMessage({ role: 'user', content: messageToSend });
+      }
 
-        const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: messageToSend,
-            sessionId: currentChallenge.sessionId,
-          }),
-        });
+      responseTimer.current = setTimeout(() => {
+        setResponseDelay(prev => prev + 1);
+        scrollToBottom();
+      }, 3000);
 
-        if (responseTimer.current) {
-          clearTimeout(responseTimer.current);
-        }
-        setResponseDelay(0);
+      const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageToSend,
+          sessionId: currentChallenge?.sessionId || 'anonymous',
+          isAnonymous: !auth.currentUser
+        })
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to send message to webhook');
-        }
+      if (responseTimer.current) {
+        clearTimeout(responseTimer.current);
+      }
+      setResponseDelay(0);
 
-        const data = await response.json();
-        if (data[0]?.output) {
-          const aiResponse = data[0].output;
-          const startupData = extractStartupData(aiResponse);
+      if (!response.ok) {
+        throw new Error('Failed to send message to webhook');
+      }
 
-          if (startupData) {
+      const data = await response.json();
+      if (data[0]?.output) {
+        const aiResponse = data[0].output;
+        const startupData = extractStartupData(aiResponse);
+
+        if (startupData) {
+          if (!auth.currentUser) {
+            setShowLoginPrompt(true);
+            await addMessage({
+              role: 'assistant',
+              content: 'Para ver a lista completa de startups, é necessário criar uma conta. É rápido e gratuito!\n\n<login-prompt>Criar conta grátis</login-prompt>'
+            });
+          } else {
             const hasEnoughTokens = await checkAndUpdateTokens(STARTUP_LIST_TOKEN_COST);
             if (!hasEnoughTokens) {
               setIsLoading(false);
@@ -204,8 +230,8 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             await addDoc(collection(db, 'startupLists'), {
               userId: auth.currentUser.uid,
               userEmail: auth.currentUser.email,
-              challengeId: currentChallenge.id,
-              challengeTitle: currentChallenge.title,
+              challengeId: currentChallenge?.id,
+              challengeTitle: currentChallenge?.title,
               ...startupData,
               createdAt: new Date().toISOString()
             });
@@ -217,31 +243,29 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             });
 
             navigate('/startups');
-          } else {
-            await addMessage({ 
-              role: 'assistant', 
-              content: aiResponse,
-              hidden: overrideMessage ? true : false
-            });
-            scrollToBottom();
           }
+        } else {
+          await addMessage({ 
+            role: 'assistant', 
+            content: aiResponse,
+            hidden: overrideMessage ? true : false
+          });
         }
-      } catch (error) {
-        console.error('Error in chat:', error);
-        await addMessage({
-          role: 'assistant',
-          content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'
-        });
-        scrollToBottom();
-      } finally {
-        setIsLoading(false);
-        if (responseTimer.current) {
-          clearTimeout(responseTimer.current);
-        }
-        setResponseDelay(0);
-        if (inputRef.current) {
-          inputRef.current.disabled = false;
-        }
+      }
+    } catch (error) {
+      console.error('Error in chat:', error);
+      await addMessage({
+        role: 'assistant',
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'
+      });
+    } finally {
+      setIsLoading(false);
+      if (responseTimer.current) {
+        clearTimeout(responseTimer.current);
+      }
+      setResponseDelay(0);
+      if (inputRef.current) {
+        inputRef.current.disabled = false;
       }
     }
   };
@@ -304,6 +328,20 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       );
     }
 
+    if (message.content.includes('<login-prompt>')) {
+      return (
+        <div className="space-y-4">
+          <p>{message.content.split('<login-prompt>')[0]}</p>
+          <Link
+            to="/register"
+            className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+          >
+            Criar conta grátis
+          </Link>
+        </div>
+      );
+    }
+
     return <p className="whitespace-pre-wrap">{message.content}</p>;
   };
 
@@ -311,6 +349,31 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-hidden bg-black">
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full space-y-4 animate-fade-in">
+            <h2 className="text-2xl font-bold text-white text-center">Limite de mensagens atingido</h2>
+            <p className="text-gray-300 text-center">
+              Você atingiu o limite de mensagens para usuários anônimos. Crie uma conta gratuita para continuar conversando!
+            </p>
+            <div className="flex gap-4">
+              <Link
+                to="/register"
+                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-center font-bold"
+              >
+                Criar conta
+              </Link>
+              <Link
+                to="/login"
+                className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-center font-bold"
+              >
+                Fazer login
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col p-3 border-b border-border">
         <div className="flex items-center justify-between">
           <button 
