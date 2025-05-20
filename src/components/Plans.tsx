@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Baby, Swords, SwordIcon, Sparkles, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
 
 const plans = [
   {
@@ -57,6 +57,24 @@ const SecurityBadge = ({ icon: Icon, text }: { icon: any; text: string }) => (
 const Plans = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserPlan = async () => {
+      if (!auth.currentUser) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (userDoc.exists()) {
+          setCurrentPlan(userDoc.data().plan);
+        }
+      } catch (error) {
+        console.error('Error fetching user plan:', error);
+      }
+    };
+
+    fetchUserPlan();
+  }, []);
 
   const handlePlanClick = async (plan: typeof plans[0]) => {
     if (!auth.currentUser) {
@@ -79,12 +97,17 @@ const Plans = () => {
         transactionId: crypto.randomUUID()
       });
 
-      // Redirect to Stripe
+      // Open Stripe checkout in the same window
       window.location.href = plan.stripeLink;
     } catch (error) {
       console.error('Error recording plan click:', error);
       setError('Erro ao processar sua solicitação. Por favor, tente novamente.');
     }
+  };
+
+  const isPlanDisabled = (planName: string) => {
+    if (!currentPlan) return false;
+    return currentPlan.toLowerCase().replace(' ', '-') === planName;
   };
 
   return (
@@ -114,6 +137,8 @@ const Plans = () => {
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isPadawan = plan.id === 'padawan';
+            const isDisabled = isPlanDisabled(plan.id);
+            
             return (
               <div
                 key={plan.id}
@@ -143,21 +168,17 @@ const Plans = () => {
                   <div className="text-blue-400">{plan.tokens} tokens</div>
                 </div>
 
-                {isPadawan ? (
-                  <button
-                    disabled
-                    className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-gray-600 cursor-not-allowed opacity-50"
-                  >
-                    <span>Plano inicial</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handlePlanClick(plan)}
-                    className="block w-full py-3 px-4 rounded-lg text-white text-center font-bold bg-blue-600 hover:bg-blue-700 transition-colors"
-                  >
-                    <span>Começar agora</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => !isPadawan && !isDisabled && handlePlanClick(plan)}
+                  disabled={isPadawan || isDisabled}
+                  className={`block w-full py-3 px-4 rounded-lg text-white text-center font-bold transition-colors ${
+                    isPadawan || isDisabled
+                      ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {isPadawan ? 'Plano inicial' : isDisabled ? 'Plano atual' : 'Começar agora'}
+                </button>
               </div>
             );
           })}
