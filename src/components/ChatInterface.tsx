@@ -27,15 +27,6 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (messages.length === 0) {
-      addMessage({
-        role: 'assistant',
-        content: '👋 Olá, sou a Genie, sua agente IA especializada. Descreva abaixo qual é seu desafio que irei encontrar as melhores startups para resolvê-lo! 🚀'
-      });
-    }
-  }, [messages, addMessage]);
-
-  useEffect(() => {
     const count = localStorage.getItem('anonymousMessageCount');
     if (count) {
       setAnonymousMessageCount(parseInt(count));
