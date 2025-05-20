@@ -88,7 +88,7 @@ const Layout = () => {
         id: doc.id,
         ...doc.data()
       })) as MessageType[];
-      setMessages(newMessages);
+      setMessages(newMessages.filter(message => !message.hidden));
     });
 
     return () => unsubscribe();
