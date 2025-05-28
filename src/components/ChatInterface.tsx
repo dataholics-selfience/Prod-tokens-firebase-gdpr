@@ -14,8 +14,8 @@ interface ChatInterfaceProps {
   currentChallenge: ChallengeType | undefined;
 }
 
-const MESSAGE_TOKEN_COST = 3;
-const STARTUP_LIST_TOKEN_COST = 30;
+const MESSAGE_TOKEN_COST = 2;
+const STARTUP_LIST_TOKEN_COST = 50;
 
 const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, currentChallenge }: ChatInterfaceProps) => {
   const [input, setInput] = useState('');
