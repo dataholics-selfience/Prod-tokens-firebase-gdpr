@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Star, Calendar, Building2, MapPin, Users, Briefcase, Award, 
   Target, Rocket, ArrowLeft, Mail, Globe, Box, Linkedin,
-  Facebook, Twitter, Instagram, FolderOpen
+  Facebook, Twitter, Instagram, FolderOpen, Plus, Check, X
 } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, orderBy, limit, getDocs, addDoc, where, deleteDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 import { StartupListType, StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -140,15 +140,126 @@ const SocialLinks = ({ startup, className = "" }: { startup: StartupType; classN
   );
 };
 
-const StartupCard = ({ startup, onClick }: { startup: StartupType; onClick: () => void }) => {
+const StartupCard = ({ 
+  startup, 
+  onClick, 
+  challengeTitle, 
+  challengeId,
+  onStartupSaved 
+}: { 
+  startup: StartupType; 
+  onClick: () => void;
+  challengeTitle: string;
+  challengeId: string;
+  onStartupSaved: () => void;
+}) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!auth.currentUser) return;
+      
+      try {
+        const q = query(
+          collection(db, 'selectedStartups'),
+          where('userId', '==', auth.currentUser.uid),
+          where('startupName', '==', startup.name)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          setIsSaved(true);
+          setSavedDocId(querySnapshot.docs[0].id);
+        }
+      } catch (error) {
+        console.error('Error checking if startup is saved:', error);
+      }
+    };
+
+    checkIfSaved();
+  }, [startup.name]);
+
+  const handleSelectStartup = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!auth.currentUser || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      if (isSaved && savedDocId) {
+        // Remove startup
+        await deleteDoc(doc(db, 'selectedStartups', savedDocId));
+        setIsSaved(false);
+        setSavedDocId(null);
+      } else {
+        // Add startup with "mapeada" stage
+        const docRef = await addDoc(collection(db, 'selectedStartups'), {
+          userId: auth.currentUser.uid,
+          userEmail: auth.currentUser.email,
+          challengeId,
+          challengeTitle,
+          startupName: startup.name,
+          startupData: startup,
+          selectedAt: new Date().toISOString(),
+          stage: 'mapeada',
+          updatedAt: new Date().toISOString()
+        });
+        setIsSaved(true);
+        setSavedDocId(docRef.id);
+        
+        // Navigate to saved startups page
+        navigate('/saved-startups');
+      }
+
+      onStartupSaved();
+    } catch (error) {
+      console.error('Error saving/removing startup:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div
       onClick={onClick}
       className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 hover:scale-105 transition-transform cursor-pointer"
     >
       <div className="flex justify-between items-start mb-4">
-        <div className="space-y-3">
-          <h2 className="text-xl font-bold text-white">{startup.name}</h2>
+        <div className="space-y-3 flex-1">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white">{startup.name}</h2>
+            <button
+              onClick={handleSelectStartup}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                isSaved
+                  ? 'bg-green-600 hover:bg-red-600 text-white'
+                  : isSaving
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isSaved ? (
+                <>
+                  <X size={16} />
+                  Selecionada
+                </>
+              ) : isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  Selecionar startup
+                </>
+              )}
+            </button>
+          </div>
           <SocialLinks startup={startup} />
         </div>
         <StarRating rating={startup.rating} />
@@ -258,6 +369,7 @@ const StartupList = () => {
   const navigate = useNavigate();
   const [startupData, setStartupData] = useState<StartupListType | null>(null);
   const [selectedStartup, setSelectedStartup] = useState<StartupType | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchStartupData = async () => {
@@ -290,6 +402,10 @@ const StartupList = () => {
     } else {
       navigate(-1);
     }
+  };
+
+  const handleStartupSaved = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   if (!startupData) {
@@ -342,12 +458,15 @@ const StartupList = () => {
 
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16" key={refreshKey}>
             {startupData.startups.map((startup, index) => (
               <StartupCard
                 key={index}
                 startup={startup}
                 onClick={() => handleStartupClick(startup)}
+                challengeTitle={startupData.challengeTitle}
+                challengeId={startupData.id}
+                onStartupSaved={handleStartupSaved}
               />
             ))}
           </div>
