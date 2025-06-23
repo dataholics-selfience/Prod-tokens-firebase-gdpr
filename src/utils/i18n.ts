@@ -1139,7 +1139,7 @@ export const translations: Record<string, Translations> = {
     upgradePlan: 'Aggiorna piano',
     
     // Language Change Message
-    languageChangeMessage: 'Potresti cambiare la lingua in tedesco e iniziare il questionario?',
+    languageChangeMessage: 'Potresti cambiare la lingua in Italiani e iniziare il questionario?',
     
     // Common
     back: 'Indietro',
