@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Mail, Phone, User, Building2, Plus, 
-  Edit2, Trash2, Save, X, UserPlus
+  Edit2, Trash2, Save, X, UserPlus, Linkedin, Instagram
 } from 'lucide-react';
 import { 
   doc, 
@@ -14,8 +14,10 @@ import { db, auth } from '../firebase';
 interface Contact {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
+  emails?: string[];
+  phones?: string[];
+  linkedin?: string;
+  instagram?: string;
   role?: string;
   type: 'startup' | 'founder';
 }
@@ -27,6 +29,10 @@ interface StartupData {
     name: string;
     email: string;
     contacts?: Contact[];
+    socialLinks?: {
+      linkedin?: string;
+      instagram?: string;
+    };
   };
 }
 
@@ -40,8 +46,10 @@ const ContactManagement = () => {
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContact, setNewContact] = useState<Partial<Contact>>({
     name: '',
-    email: '',
-    phone: '',
+    emails: [''],
+    phones: [''],
+    linkedin: '',
+    instagram: '',
     role: '',
     type: 'startup'
   });
@@ -64,16 +72,45 @@ const ContactManagement = () => {
         const startup = { id: startupDoc.id, ...startupDoc.data() } as StartupData;
         setStartupData(startup);
 
-        // Initialize contacts with default startup contact
+        // Initialize contacts with default startup contact and social links
         const existingContacts = startup.startupData.contacts || [];
-        const defaultContact: Contact = {
-          id: 'default',
-          name: startup.startupData.name,
-          email: startup.startupData.email,
-          type: 'startup'
-        };
+        const defaultContacts: Contact[] = [];
+
+        // Add startup email contact
+        if (startup.startupData.email) {
+          defaultContacts.push({
+            id: 'default-email',
+            name: startup.startupData.name,
+            emails: [startup.startupData.email],
+            type: 'startup'
+          });
+        }
+
+        // Add LinkedIn contact if available
+        if (startup.startupData.socialLinks?.linkedin) {
+          defaultContacts.push({
+            id: 'default-linkedin',
+            name: `${startup.startupData.name} (LinkedIn)`,
+            linkedin: startup.startupData.socialLinks.linkedin,
+            emails: startup.startupData.email ? [startup.startupData.email] : [],
+            type: 'startup',
+            role: 'LinkedIn Profile'
+          });
+        }
+
+        // Add Instagram contact if available
+        if (startup.startupData.socialLinks?.instagram) {
+          defaultContacts.push({
+            id: 'default-instagram',
+            name: `${startup.startupData.name} (Instagram)`,
+            instagram: startup.startupData.socialLinks.instagram,
+            emails: startup.startupData.email ? [startup.startupData.email] : [],
+            type: 'startup',
+            role: 'Instagram Profile'
+          });
+        }
         
-        const allContacts = [defaultContact, ...existingContacts];
+        const allContacts = [...defaultContacts, ...existingContacts];
         setContacts(allContacts);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -117,17 +154,52 @@ const ContactManagement = () => {
     return phone;
   };
 
+  const handleAddEmail = (contactData: Partial<Contact>, setContactData: (data: Partial<Contact>) => void) => {
+    const emails = contactData.emails || [''];
+    setContactData({ ...contactData, emails: [...emails, ''] });
+  };
+
+  const handleRemoveEmail = (index: number, contactData: Partial<Contact>, setContactData: (data: Partial<Contact>) => void) => {
+    const emails = contactData.emails || [];
+    if (emails.length > 1) {
+      setContactData({ ...contactData, emails: emails.filter((_, i) => i !== index) });
+    }
+  };
+
+  const handleAddPhone = (contactData: Partial<Contact>, setContactData: (data: Partial<Contact>) => void) => {
+    const phones = contactData.phones || [''];
+    setContactData({ ...contactData, phones: [...phones, ''] });
+  };
+
+  const handleRemovePhone = (index: number, contactData: Partial<Contact>, setContactData: (data: Partial<Contact>) => void) => {
+    const phones = contactData.phones || [];
+    if (phones.length > 1) {
+      setContactData({ ...contactData, phones: phones.filter((_, i) => i !== index) });
+    }
+  };
+
   const handleAddContact = async () => {
     if (!newContact.name || !startupData || !startupId) return;
 
+    // Build contact object with only defined values
     const contactToAdd: Contact = {
       id: Date.now().toString(),
       name: newContact.name,
-      email: newContact.email || undefined,
-      phone: newContact.phone ? formatPhoneForEvolution(newContact.phone) : undefined,
-      role: newContact.role || undefined,
+      emails: (newContact.emails || []).filter(email => email.trim() !== ''),
+      phones: (newContact.phones || []).filter(phone => phone.trim() !== '').map(formatPhoneForEvolution),
       type: newContact.type || 'startup'
     };
+
+    // Only add optional fields if they have values
+    if (newContact.linkedin && newContact.linkedin.trim() !== '') {
+      contactToAdd.linkedin = newContact.linkedin.trim();
+    }
+    if (newContact.instagram && newContact.instagram.trim() !== '') {
+      contactToAdd.instagram = newContact.instagram.trim();
+    }
+    if (newContact.role && newContact.role.trim() !== '') {
+      contactToAdd.role = newContact.role.trim();
+    }
 
     try {
       const updatedContacts = [...(startupData.startupData.contacts || []), contactToAdd];
@@ -137,7 +209,15 @@ const ContactManagement = () => {
       });
 
       setContacts(prev => [...prev, contactToAdd]);
-      setNewContact({ name: '', email: '', phone: '', role: '', type: 'startup' });
+      setNewContact({ 
+        name: '', 
+        emails: [''], 
+        phones: [''], 
+        linkedin: '', 
+        instagram: '', 
+        role: '', 
+        type: 'startup' 
+      });
       setShowAddContact(false);
       setStatus({ type: 'success', message: 'Contato adicionado com sucesso!' });
     } catch (error) {
@@ -150,10 +230,31 @@ const ContactManagement = () => {
     if (!editingContact || !startupData || !startupId) return;
 
     try {
-      const updatedContact = {
+      // Build updated contact object with only defined values
+      const updatedContact: Contact = {
         ...editingContact,
-        phone: editingContact.phone ? formatPhoneForEvolution(editingContact.phone) : undefined
+        emails: (editingContact.emails || []).filter(email => email.trim() !== ''),
+        phones: (editingContact.phones || []).filter(phone => phone.trim() !== '').map(formatPhoneForEvolution)
       };
+
+      // Only include optional fields if they have values
+      if (editingContact.linkedin && editingContact.linkedin.trim() !== '') {
+        updatedContact.linkedin = editingContact.linkedin.trim();
+      } else {
+        delete updatedContact.linkedin;
+      }
+      
+      if (editingContact.instagram && editingContact.instagram.trim() !== '') {
+        updatedContact.instagram = editingContact.instagram.trim();
+      } else {
+        delete updatedContact.instagram;
+      }
+      
+      if (editingContact.role && editingContact.role.trim() !== '') {
+        updatedContact.role = editingContact.role.trim();
+      } else {
+        delete updatedContact.role;
+      }
 
       const updatedContacts = (startupData.startupData.contacts || []).map(contact =>
         contact.id === editingContact.id ? updatedContact : contact
@@ -176,7 +277,7 @@ const ContactManagement = () => {
   };
 
   const handleDeleteContact = async (contactId: string) => {
-    if (!startupData || contactId === 'default' || !startupId) return;
+    if (!startupData || contactId.startsWith('default-') || !startupId) return;
 
     try {
       const updatedContacts = (startupData.startupData.contacts || []).filter(
@@ -233,9 +334,9 @@ const ContactManagement = () => {
         </div>
       </div>
 
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="p-4 lg:p-8 max-w-6xl mx-auto">
         {/* Add Contact Button */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <h1 className="text-2xl font-bold text-white">Contatos</h1>
           <button
             onClick={() => setShowAddContact(true)}
@@ -276,22 +377,94 @@ const ContactManagement = () => {
                 onChange={(e) => setNewContact(prev => ({ ...prev, role: e.target.value }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+
+            {/* Multiple Emails */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Emails</label>
+              {(newContact.emails || ['']).map((email, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => {
+                      const emails = [...(newContact.emails || [''])];
+                      emails[index] = e.target.value;
+                      setNewContact(prev => ({ ...prev, emails }));
+                    }}
+                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {(newContact.emails || []).length > 1 && (
+                    <button
+                      onClick={() => handleRemoveEmail(index, newContact, setNewContact)}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => handleAddEmail(newContact, setNewContact)}
+                className="text-blue-400 hover:text-blue-300 text-sm"
+              >
+                + Adicionar outro email
+              </button>
+            </div>
+
+            {/* Multiple Phones */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Telefones/WhatsApp</label>
+              {(newContact.phones || ['']).map((phone, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="tel"
+                    placeholder="Telefone/WhatsApp"
+                    value={phone}
+                    onChange={(e) => {
+                      const phones = [...(newContact.phones || [''])];
+                      phones[index] = e.target.value;
+                      setNewContact(prev => ({ ...prev, phones }));
+                    }}
+                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {(newContact.phones || []).length > 1 && (
+                    <button
+                      onClick={() => handleRemovePhone(index, newContact, setNewContact)}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => handleAddPhone(newContact, setNewContact)}
+                className="text-blue-400 hover:text-blue-300 text-sm"
+              >
+                + Adicionar outro telefone
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <input
-                type="email"
-                placeholder="Email"
-                value={newContact.email}
-                onChange={(e) => setNewContact(prev => ({ ...prev, email: e.target.value }))}
+                type="url"
+                placeholder="LinkedIn"
+                value={newContact.linkedin}
+                onChange={(e) => setNewContact(prev => ({ ...prev, linkedin: e.target.value }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
-                type="tel"
-                placeholder="Telefone/WhatsApp"
-                value={newContact.phone}
-                onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
+                type="url"
+                placeholder="Instagram"
+                value={newContact.instagram}
+                onChange={(e) => setNewContact(prev => ({ ...prev, instagram: e.target.value }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex items-center gap-4">
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <select
                 value={newContact.type}
                 onChange={(e) => setNewContact(prev => ({ ...prev, type: e.target.value as 'startup' | 'founder' }))}
@@ -300,30 +473,40 @@ const ContactManagement = () => {
                 <option value="startup">Startup</option>
                 <option value="founder">Fundador</option>
               </select>
-              <button
-                onClick={handleAddContact}
-                disabled={!newContact.name}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                <Save size={16} />
-                Salvar
-              </button>
-              <button
-                onClick={() => {
-                  setShowAddContact(false);
-                  setNewContact({ name: '', email: '', phone: '', role: '', type: 'startup' });
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                <X size={16} />
-                Cancelar
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddContact}
+                  disabled={!newContact.name}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  <Save size={16} />
+                  Salvar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddContact(false);
+                    setNewContact({ 
+                      name: '', 
+                      emails: [''], 
+                      phones: [''], 
+                      linkedin: '', 
+                      instagram: '', 
+                      role: '', 
+                      type: 'startup' 
+                    });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Contacts List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {contacts.map((contact) => (
             <div key={contact.id} className="bg-gray-800 rounded-lg p-6">
               {editingContact?.id === contact.id ? (
@@ -343,18 +526,87 @@ const ContactManagement = () => {
                     onChange={(e) => setEditingContact(prev => prev ? { ...prev, role: e.target.value } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  
+                  {/* Multiple Emails in Edit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Emails</label>
+                    {(editingContact.emails || ['']).map((email, index) => (
+                      <div key={index} className="flex gap-2 mb-2">
+                        <input
+                          type="email"
+                          placeholder="Email"
+                          value={email}
+                          onChange={(e) => {
+                            const emails = [...(editingContact.emails || [''])];
+                            emails[index] = e.target.value;
+                            setEditingContact(prev => prev ? { ...prev, emails } : null);
+                          }}
+                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {(editingContact.emails || []).length > 1 && (
+                          <button
+                            onClick={() => handleRemoveEmail(index, editingContact, (data) => setEditingContact(data as Contact))}
+                            className="px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => handleAddEmail(editingContact, (data) => setEditingContact(data as Contact))}
+                      className="text-blue-400 hover:text-blue-300 text-sm"
+                    >
+                      + Adicionar outro email
+                    </button>
+                  </div>
+
+                  {/* Multiple Phones in Edit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Telefones/WhatsApp</label>
+                    {(editingContact.phones || ['']).map((phone, index) => (
+                      <div key={index} className="flex gap-2 mb-2">
+                        <input
+                          type="tel"
+                          placeholder="Telefone/WhatsApp"
+                          value={phone ? formatPhoneDisplay(phone) : ''}
+                          onChange={(e) => {
+                            const phones = [...(editingContact.phones || [''])];
+                            phones[index] = e.target.value;
+                            setEditingContact(prev => prev ? { ...prev, phones } : null);
+                          }}
+                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {(editingContact.phones || []).length > 1 && (
+                          <button
+                            onClick={() => handleRemovePhone(index, editingContact, (data) => setEditingContact(data as Contact))}
+                            className="px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => handleAddPhone(editingContact, (data) => setEditingContact(data as Contact))}
+                      className="text-blue-400 hover:text-blue-300 text-sm"
+                    >
+                      + Adicionar outro telefone
+                    </button>
+                  </div>
+
                   <input
-                    type="email"
-                    placeholder="Email"
-                    value={editingContact.email || ''}
-                    onChange={(e) => setEditingContact(prev => prev ? { ...prev, email: e.target.value } : null)}
+                    type="url"
+                    placeholder="LinkedIn"
+                    value={editingContact.linkedin || ''}
+                    onChange={(e) => setEditingContact(prev => prev ? { ...prev, linkedin: e.target.value } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
-                    type="tel"
-                    placeholder="Telefone/WhatsApp"
-                    value={editingContact.phone ? formatPhoneDisplay(editingContact.phone) : ''}
-                    onChange={(e) => setEditingContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                    type="url"
+                    placeholder="Instagram"
+                    value={editingContact.instagram || ''}
+                    onChange={(e) => setEditingContact(prev => prev ? { ...prev, instagram: e.target.value } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <select
@@ -396,7 +648,7 @@ const ContactManagement = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {contact.id !== 'default' && (
+                      {!contact.id.startsWith('default-') && (
                         <>
                           <button
                             onClick={() => setEditingContact(contact)}
@@ -416,16 +668,50 @@ const ContactManagement = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {contact.email && (
-                      <div className="flex items-center gap-3 text-gray-300">
-                        <Mail size={16} className="text-blue-400" />
-                        <span>{contact.email}</span>
+                    {contact.emails && contact.emails.length > 0 && (
+                      <div>
+                        {contact.emails.map((email, index) => (
+                          <div key={index} className="flex items-center gap-3 text-gray-300 mb-1">
+                            <Mail size={16} className="text-blue-400" />
+                            <span>{email}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    {contact.phone && (
+                    {contact.phones && contact.phones.length > 0 && (
+                      <div>
+                        {contact.phones.map((phone, index) => (
+                          <div key={index} className="flex items-center gap-3 text-gray-300 mb-1">
+                            <Phone size={16} className="text-green-400" />
+                            <span>{formatPhoneDisplay(phone)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {contact.linkedin && (
                       <div className="flex items-center gap-3 text-gray-300">
-                        <Phone size={16} className="text-green-400" />
-                        <span>{formatPhoneDisplay(contact.phone)}</span>
+                        <Linkedin size={16} className="text-blue-500" />
+                        <a 
+                          href={contact.linkedin} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          LinkedIn
+                        </a>
+                      </div>
+                    )}
+                    {contact.instagram && (
+                      <div className="flex items-center gap-3 text-gray-300">
+                        <Instagram size={16} className="text-pink-500" />
+                        <a 
+                          href={contact.instagram} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-pink-400 hover:text-pink-300 transition-colors"
+                        >
+                          Instagram
+                        </a>
                       </div>
                     )}
                     <div className="flex items-center gap-3">

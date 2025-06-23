@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Mail, Phone, Send, Smartphone, 
-  User, Building2, Plus, Users
+  User, Building2, Plus, Users, ChevronDown, Linkedin, Instagram
 } from 'lucide-react';
 import { 
   collection, 
@@ -11,15 +11,18 @@ import {
   getDoc,
   query,
   where,
-  getDocs
+  getDocs,
+  updateDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 interface Contact {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
+  emails?: string[];
+  phones?: string[];
+  linkedin?: string;
+  instagram?: string;
   role?: string;
   type: 'startup' | 'founder';
 }
@@ -31,6 +34,12 @@ interface StartupData {
     name: string;
     email: string;
     contacts?: Contact[];
+    socialLinks?: {
+      linkedin?: string;
+      facebook?: string;
+      twitter?: string;
+      instagram?: string;
+    };
   };
 }
 
@@ -47,6 +56,11 @@ const MessageComposer = () => {
   const [loading, setLoading] = useState(true);
   const [messageType, setMessageType] = useState<'email' | 'whatsapp'>('email');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [selectedEmailIndex, setSelectedEmailIndex] = useState(0);
+  const [selectedPhoneIndex, setSelectedPhoneIndex] = useState(0);
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -72,25 +86,63 @@ const MessageComposer = () => {
         const startup = { id: startupDoc.id, ...startupDoc.data() } as StartupData;
         setStartupData(startup);
 
-        // Initialize contacts
+        // Initialize contacts with startup email and social links
         const existingContacts = startup.startupData.contacts || [];
-        const defaultContact: Contact = {
-          id: 'default',
-          name: startup.startupData.name,
-          email: startup.startupData.email,
-          type: 'startup'
-        };
-        
-        const allContacts = [defaultContact, ...existingContacts];
-        setContacts(allContacts);
-        setSelectedContact(defaultContact);
+        const defaultContacts: Contact[] = [];
 
-        // Fetch user data for sender name
+        // Add startup email contact
+        if (startup.startupData.email) {
+          defaultContacts.push({
+            id: 'startup-email',
+            name: startup.startupData.name,
+            emails: [startup.startupData.email],
+            type: 'startup'
+          });
+        }
+
+        // Add LinkedIn contacts from social links
+        if (startup.startupData.socialLinks?.linkedin) {
+          defaultContacts.push({
+            id: 'startup-linkedin',
+            name: `${startup.startupData.name} (LinkedIn)`,
+            emails: startup.startupData.email ? [startup.startupData.email] : [],
+            linkedin: startup.startupData.socialLinks.linkedin,
+            type: 'startup',
+            role: 'LinkedIn Profile'
+          });
+        }
+
+        // Add Instagram contacts from social links
+        if (startup.startupData.socialLinks?.instagram) {
+          defaultContacts.push({
+            id: 'startup-instagram',
+            name: `${startup.startupData.name} (Instagram)`,
+            emails: startup.startupData.email ? [startup.startupData.email] : [],
+            instagram: startup.startupData.socialLinks.instagram,
+            type: 'startup',
+            role: 'Instagram Profile'
+          });
+        }
+
+        const allContacts = [...defaultContacts, ...existingContacts];
+        setContacts(allContacts);
+        
+        if (allContacts.length > 0) {
+          setSelectedContact(allContacts[0]);
+        }
+
+        // Fetch user data for sender name and auto-generate subject
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setSenderName(userData.name || '');
           setSenderCompany(userData.company || '');
+          
+          // Auto-generate subject for email
+          if (messageType === 'email') {
+            const company = userData.company || '';
+            setSubject(`A ${company} deseja contatar a ${startup.startupData.name} - `);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -101,6 +153,13 @@ const MessageComposer = () => {
 
     fetchData();
   }, [startupId, navigate]);
+
+  // Update subject when message type or startup changes
+  useEffect(() => {
+    if (messageType === 'email' && startupData && senderCompany) {
+      setSubject(`A ${senderCompany} deseja contatar a ${startupData.startupData.name} - `);
+    }
+  }, [messageType, startupData, senderCompany]);
 
   const formatPhoneForEvolution = (phone: string): string => {
     const cleanPhone = phone.replace(/\D/g, '');
@@ -139,28 +198,63 @@ const MessageComposer = () => {
     return cleanPhone.length >= 10 && cleanPhone.length <= 13;
   };
 
-  const fetchMessages = async () => {
-    if (!auth.currentUser || !startupId) return [];
+  const handleContactSelect = (contact: Contact) => {
+    setSelectedContact(contact);
+    setSelectedEmailIndex(0);
+    setSelectedPhoneIndex(0);
+    setShowContactDropdown(false);
+    
+    // Show phone input if WhatsApp is selected but contact has no phone
+    if (messageType === 'whatsapp' && (!contact.phones || contact.phones.length === 0)) {
+      setShowPhoneInput(true);
+    } else {
+      setShowPhoneInput(false);
+    }
+  };
 
+  const handleAddPhoneNumber = async () => {
+    if (!selectedContact || !newPhoneNumber.trim() || !startupData) return;
+
+    const formattedPhone = formatPhoneForEvolution(newPhoneNumber);
+    
     try {
-      const messagesQuery = query(
-        collection(db, 'crmMessages'),
-        where('startupId', '==', startupId)
-      );
-
-      const messagesSnapshot = await getDocs(messagesQuery);
-      const allMessages = messagesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      const userMessages = allMessages.filter(message => message.userId === auth.currentUser?.uid);
-      userMessages.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+      // Update the contact with the new phone number
+      const updatedContact = { 
+        ...selectedContact, 
+        phones: [...(selectedContact.phones || []), formattedPhone]
+      };
       
-      return userMessages;
+      if (selectedContact.id.startsWith('startup-')) {
+        // For default contacts, add to the contacts array
+        const updatedContacts = [...(startupData.startupData.contacts || []), {
+          ...updatedContact,
+          id: Date.now().toString()
+        }];
+        
+        await updateDoc(doc(db, 'selectedStartups', startupData.id), {
+          'startupData.contacts': updatedContacts
+        });
+      } else {
+        // Update existing contact
+        const updatedContacts = (startupData.startupData.contacts || []).map(contact =>
+          contact.id === selectedContact.id ? updatedContact : contact
+        );
+        
+        await updateDoc(doc(db, 'selectedStartups', startupData.id), {
+          'startupData.contacts': updatedContacts
+        });
+      }
+
+      setSelectedContact(updatedContact);
+      setContacts(prev => prev.map(contact => 
+        contact.id === selectedContact.id ? updatedContact : contact
+      ));
+      setNewPhoneNumber('');
+      setShowPhoneInput(false);
+      setStatus({ type: 'success', message: 'Número de WhatsApp adicionado com sucesso!' });
     } catch (error) {
-      console.error('Error fetching messages:', error);
-      return [];
+      console.error('Error adding phone number:', error);
+      setStatus({ type: 'error', message: 'Erro ao adicionar número de WhatsApp' });
     }
   };
 
@@ -172,12 +266,15 @@ const MessageComposer = () => {
       return;
     }
 
-    if (messageType === 'email' && !selectedContact.email) {
+    const selectedEmail = selectedContact.emails?.[selectedEmailIndex];
+    const selectedPhone = selectedContact.phones?.[selectedPhoneIndex];
+
+    if (messageType === 'email' && !selectedEmail) {
       setStatus({ type: 'error', message: 'Email do destinatário é obrigatório' });
       return;
     }
 
-    if (messageType === 'whatsapp' && (!selectedContact.phone || !validatePhoneNumber(selectedContact.phone))) {
+    if (messageType === 'whatsapp' && (!selectedPhone || !validatePhoneNumber(selectedPhone))) {
       setStatus({ type: 'error', message: 'Número de telefone inválido para WhatsApp' });
       return;
     }
@@ -188,14 +285,18 @@ const MessageComposer = () => {
     try {
       let success = false;
       let errorMessage = '';
+      let finalMessage = message.trim();
 
       if (messageType === 'whatsapp') {
+        // Add footer to WhatsApp message
+        finalMessage += `\n\nMensagem enviada pela genoi.net pelo cliente ${senderCompany} para a ${startupData.startupName}`;
+        
         // Send via Evolution API
-        const formattedPhone = formatPhoneForEvolution(selectedContact.phone!);
+        const formattedPhone = formatPhoneForEvolution(selectedPhone!);
         
         const evolutionPayload = {
           number: formattedPhone,
-          text: message.trim()
+          text: finalMessage
         };
 
         console.log('Sending WhatsApp message via Evolution API:', {
@@ -242,12 +343,12 @@ const MessageComposer = () => {
             <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
               <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                 <div style="white-space: pre-wrap; margin-bottom: 25px; font-size: 16px;">
-                  ${message.trim()}
+                  ${finalMessage}
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
                 <div style="font-size: 14px; color: #666;">
                   <p><strong>Atenciosamente,</strong><br>
-                  ${senderName}, ${senderCompany}</p>
+                  Genie, sua agente IA para inovação aberta.</p>
                   <p style="margin-top: 20px;">
                     <strong>Gen.OI</strong><br>
                     Conectando empresas às melhores startups do mundo<br>
@@ -266,7 +367,7 @@ const MessageComposer = () => {
 
         const emailPayload = {
           to: [{ 
-            email: selectedContact.email!, 
+            email: selectedEmail!, 
             name: selectedContact.name 
           }],
           from: { 
@@ -275,7 +376,7 @@ const MessageComposer = () => {
           },
           subject: subject.trim(),
           html: emailHtml,
-          text: message.trim(),
+          text: finalMessage,
           reply_to: { 
             email: 'contact@genoi.net', 
             name: 'Gen.OI - Suporte' 
@@ -304,16 +405,16 @@ const MessageComposer = () => {
           recipientName: selectedContact.name,
           recipientType: selectedContact.type,
           messageType,
-          message: message.trim(),
+          message: finalMessage,
           sentAt: new Date().toISOString(),
           status: 'sent' as const
         };
 
-        if (messageType === 'email' && selectedContact.email) {
-          messageData.recipientEmail = selectedContact.email;
+        if (messageType === 'email' && selectedEmail) {
+          messageData.recipientEmail = selectedEmail;
         }
-        if (messageType === 'whatsapp' && selectedContact.phone) {
-          messageData.recipientPhone = formatPhoneForEvolution(selectedContact.phone);
+        if (messageType === 'whatsapp' && selectedPhone) {
+          messageData.recipientPhone = formatPhoneForEvolution(selectedPhone);
         }
         if (messageType === 'email' && subject.trim()) {
           messageData.subject = subject.trim();
@@ -326,14 +427,8 @@ const MessageComposer = () => {
           message: `${messageType === 'email' ? 'Email' : 'Mensagem WhatsApp'} enviada com sucesso!` 
         });
 
-        // Reset form
-        setMessage('');
-        setSubject('');
-
-        // Navigate back to timeline after 2 seconds
-        setTimeout(() => {
-          navigate(`/startup/${startupId}/timeline`);
-        }, 2000);
+        // Navigate back to timeline immediately
+        navigate(`/startup/${startupId}/timeline`);
       } else {
         throw new Error(errorMessage || 'Falha no envio');
       }
@@ -390,10 +485,10 @@ const MessageComposer = () => {
         </div>
       </div>
 
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-white">Compor Mensagem</h1>
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
+        <div className="bg-gray-800 rounded-lg p-4 lg:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+            <h1 className="text-xl lg:text-2xl font-bold text-white">Compor Mensagem</h1>
             <button
               onClick={handleManageContacts}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
@@ -407,7 +502,7 @@ const MessageComposer = () => {
           <div className="flex gap-4 mb-6">
             <button
               onClick={() => setMessageType('email')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-lg transition-colors ${
                 messageType === 'email'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -418,7 +513,7 @@ const MessageComposer = () => {
             </button>
             <button
               onClick={() => setMessageType('whatsapp')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-lg transition-colors ${
                 messageType === 'whatsapp'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -429,50 +524,182 @@ const MessageComposer = () => {
             </button>
           </div>
 
-          {/* Contact Selection */}
+          {/* Contact Selection Dropdown */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
               Destinatário
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {contacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  onClick={() => setSelectedContact(contact)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                    selectedContact?.id === contact.id
-                      ? 'border-blue-500 bg-blue-900/20'
-                      : 'border-gray-600 bg-gray-700 hover:bg-gray-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <User size={20} className="text-blue-400" />
-                    <div className="flex-1">
-                      <div className="font-medium text-white">{contact.name}</div>
-                      {contact.role && (
-                        <div className="text-sm text-gray-400">{contact.role}</div>
-                      )}
-                      {messageType === 'email' && contact.email && (
-                        <div className="text-sm text-gray-300 flex items-center gap-1">
-                          <Mail size={12} />
-                          {contact.email}
-                        </div>
-                      )}
-                      {messageType === 'whatsapp' && contact.phone && (
-                        <div className="text-sm text-gray-300 flex items-center gap-1">
-                          <Phone size={12} />
-                          {formatPhoneDisplay(contact.phone)}
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 mt-1">
-                        {contact.type === 'startup' ? 'Startup' : 'Fundador'}
+            <div className="relative">
+              <button
+                onClick={() => setShowContactDropdown(!showContactDropdown)}
+                className="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <User size={20} className="text-blue-400" />
+                  <div className="text-left">
+                    <div className="font-medium">{selectedContact?.name || 'Selecione um contato'}</div>
+                    {selectedContact && (
+                      <div className="text-sm text-gray-400">
+                        {messageType === 'email' && selectedContact.emails && selectedContact.emails.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Mail size={12} />
+                            {selectedContact.emails[selectedEmailIndex]}
+                            {selectedContact.emails.length > 1 && (
+                              <span className="text-xs">({selectedEmailIndex + 1}/{selectedContact.emails.length})</span>
+                            )}
+                          </div>
+                        )}
+                        {messageType === 'whatsapp' && selectedContact.phones && selectedContact.phones.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Phone size={12} />
+                            {formatPhoneDisplay(selectedContact.phones[selectedPhoneIndex])}
+                            {selectedContact.phones.length > 1 && (
+                              <span className="text-xs">({selectedPhoneIndex + 1}/{selectedContact.phones.length})</span>
+                            )}
+                          </div>
+                        )}
+                        {selectedContact.role && (
+                          <div className="text-xs">{selectedContact.role}</div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
-              ))}
+                <ChevronDown size={20} className="text-gray-400" />
+              </button>
+
+              {showContactDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                  {contacts.map((contact) => (
+                    <button
+                      key={contact.id}
+                      onClick={() => handleContactSelect(contact)}
+                      className="w-full p-4 text-left hover:bg-gray-600 transition-colors border-b border-gray-600 last:border-b-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <User size={16} className="text-blue-400" />
+                        <div className="flex-1">
+                          <div className="font-medium text-white">{contact.name}</div>
+                          {contact.role && (
+                            <div className="text-sm text-gray-400">{contact.role}</div>
+                          )}
+                          {messageType === 'email' && contact.emails && contact.emails.length > 0 && (
+                            <div className="text-sm text-gray-300 flex items-center gap-1">
+                              <Mail size={12} />
+                              {contact.emails[0]}
+                              {contact.emails.length > 1 && (
+                                <span className="text-xs">+{contact.emails.length - 1} mais</span>
+                              )}
+                            </div>
+                          )}
+                          {messageType === 'whatsapp' && contact.phones && contact.phones.length > 0 && (
+                            <div className="text-sm text-gray-300 flex items-center gap-1">
+                              <Phone size={12} />
+                              {formatPhoneDisplay(contact.phones[0])}
+                              {contact.phones.length > 1 && (
+                                <span className="text-xs">+{contact.phones.length - 1} mais</span>
+                              )}
+                            </div>
+                          )}
+                          {messageType === 'whatsapp' && (!contact.phones || contact.phones.length === 0) && (
+                            <div className="text-sm text-yellow-400">Sem WhatsApp cadastrado</div>
+                          )}
+                          {contact.linkedin && (
+                            <div className="text-xs text-blue-400 flex items-center gap-1">
+                              <Linkedin size={10} />
+                              LinkedIn
+                            </div>
+                          )}
+                          {contact.instagram && (
+                            <div className="text-xs text-pink-400 flex items-center gap-1">
+                              <Instagram size={10} />
+                              Instagram
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {contact.type === 'startup' ? 'Startup' : 'Fundador'}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Email/Phone Selection for contacts with multiple options */}
+          {selectedContact && messageType === 'email' && selectedContact.emails && selectedContact.emails.length > 1 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Selecionar Email
+              </label>
+              <select
+                value={selectedEmailIndex}
+                onChange={(e) => setSelectedEmailIndex(parseInt(e.target.value))}
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {selectedContact.emails.map((email, index) => (
+                  <option key={index} value={index}>
+                    {email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedContact && messageType === 'whatsapp' && selectedContact.phones && selectedContact.phones.length > 1 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Selecionar Telefone
+              </label>
+              <select
+                value={selectedPhoneIndex}
+                onChange={(e) => setSelectedPhoneIndex(parseInt(e.target.value))}
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {selectedContact.phones.map((phone, index) => (
+                  <option key={index} value={index}>
+                    {formatPhoneDisplay(phone)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Phone Number Input for WhatsApp */}
+          {showPhoneInput && (
+            <div className="mb-6 bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
+              <h4 className="text-yellow-400 font-medium mb-3">Adicionar Número do WhatsApp</h4>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="tel"
+                  value={newPhoneNumber}
+                  onChange={(e) => setNewPhoneNumber(e.target.value)}
+                  placeholder="Digite o número do WhatsApp"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddPhoneNumber}
+                    disabled={!newPhoneNumber.trim()}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
+                  >
+                    Adicionar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPhoneInput(false);
+                      setNewPhoneNumber('');
+                    }}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Subject (only for email) */}
           {messageType === 'email' && (
@@ -485,7 +712,7 @@ const MessageComposer = () => {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Assunto do email"
+                placeholder={`A ${senderCompany} deseja contatar a ${startupData.startupName} - `}
               />
             </div>
           )}
@@ -520,7 +747,7 @@ const MessageComposer = () => {
             <button
               onClick={handleSendMessage}
               disabled={isSending || !message.trim() || (messageType === 'email' && !subject.trim()) || !selectedContact}
-              className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-2 px-6 lg:px-8 py-3 rounded-lg font-medium transition-colors ${
                 isSending || !message.trim() || (messageType === 'email' && !subject.trim()) || !selectedContact
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : messageType === 'email'

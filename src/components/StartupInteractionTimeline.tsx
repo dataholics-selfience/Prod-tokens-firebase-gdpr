@@ -54,8 +54,10 @@ interface StartupData {
 interface Contact {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
+  emails?: string[];
+  phones?: string[];
+  linkedin?: string;
+  instagram?: string;
   role?: string;
   type: 'startup' | 'founder';
 }
@@ -209,6 +211,10 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
     navigate(`/startup/${startupId}/message`);
   };
 
+  const handleBackToSavedStartups = () => {
+    navigate('/saved-startups');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -231,7 +237,7 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
       <div className="flex flex-col p-3 border-b border-gray-800">
         <div className="flex items-center justify-between">
           <button
-            onClick={onBack}
+            onClick={handleBackToSavedStartups}
             className="text-gray-300 hover:text-white focus:outline-none"
           >
             <ArrowLeft size={20} />
@@ -243,22 +249,22 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
         </div>
       </div>
 
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
         {/* Top Section - Startup Name and Action Buttons */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">{startupData.startupData.name}</h1>
-            <div className="flex gap-4">
+        <div className="bg-gray-800 rounded-lg p-4 lg:p-6 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <h1 className="text-xl lg:text-2xl font-bold text-white">{startupData.startupData.name}</h1>
+            <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
               <button
                 onClick={handleNewContact}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm lg:text-base"
               >
                 <Plus size={16} />
                 Novo Contato
               </button>
               <button
                 onClick={handleContactsList}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm lg:text-base"
               >
                 <Users size={16} />
                 Lista de Contatos
@@ -268,12 +274,12 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
         </div>
 
         {/* Timeline Section */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-gray-800 rounded-lg p-4 lg:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <h3 className="text-lg font-bold text-white">Timeline de Interações</h3>
             <button
               onClick={handleNewMessage}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm lg:text-base"
             >
               <Edit size={16} />
               Nova Mensagem
@@ -298,11 +304,11 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
           ) : (
             <div className="space-y-6">
               {messages.map((message) => (
-                <div key={message.id} className="border-l-4 border-blue-500 pl-6 py-4 bg-gray-700 rounded-r-lg">
-                  <div className="flex items-center justify-between mb-3">
+                <div key={message.id} className="border-l-4 border-blue-500 pl-4 lg:pl-6 py-4 bg-gray-700 rounded-r-lg">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-3 gap-2">
                     <div className="flex items-center gap-3">
                       {getMessageIcon(message.messageType)}
-                      <span className="font-medium text-white text-lg">
+                      <span className="font-medium text-white text-base lg:text-lg">
                         {message.messageType === 'email' ? 'Email' : 'WhatsApp'} para {message.recipientName}
                       </span>
                       {getStatusIcon(message.status)}

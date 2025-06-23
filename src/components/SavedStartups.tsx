@@ -4,13 +4,14 @@ import {
   Star, Calendar, Building2, MapPin, Users, Briefcase, 
   ArrowLeft, Mail, Globe, Box, Linkedin, Facebook, 
   Twitter, Instagram, Trash2, FolderOpen, ChevronRight,
-  ChevronLeft, Plus, GripVertical
+  ChevronLeft, Plus, GripVertical, Settings
 } from 'lucide-react';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import PipelineStageManager from './PipelineStageManager';
 
 interface SavedStartupType {
   id: string;
@@ -25,12 +26,19 @@ interface SavedStartupType {
   updatedAt: string;
 }
 
-const PIPELINE_STAGES = [
-  { id: 'mapeada', name: 'Mapeada', color: 'bg-yellow-200 text-yellow-800 border-yellow-300' },
-  { id: 'selecionada', name: 'Selecionada', color: 'bg-blue-200 text-blue-800 border-blue-300' },
-  { id: 'contatada', name: 'Contatada', color: 'bg-red-200 text-red-800 border-red-300' },
-  { id: 'entrevistada', name: 'Entrevistada', color: 'bg-green-200 text-green-800 border-green-300' },
-  { id: 'poc', name: 'POC', color: 'bg-orange-200 text-orange-800 border-orange-300' }
+interface PipelineStage {
+  id: string;
+  name: string;
+  color: string;
+  order: number;
+}
+
+const DEFAULT_STAGES: PipelineStage[] = [
+  { id: 'mapeada', name: 'Mapeada', color: 'bg-yellow-200 text-yellow-800 border-yellow-300', order: 0 },
+  { id: 'selecionada', name: 'Selecionada', color: 'bg-blue-200 text-blue-800 border-blue-300', order: 1 },
+  { id: 'contatada', name: 'Contatada', color: 'bg-red-200 text-red-800 border-red-300', order: 2 },
+  { id: 'entrevistada', name: 'Entrevistada', color: 'bg-green-200 text-green-800 border-green-300', order: 3 },
+  { id: 'poc', name: 'POC', color: 'bg-orange-200 text-orange-800 border-orange-300', order: 4 }
 ];
 
 const StarRating = ({ rating }: { rating: number }) => {
@@ -185,15 +193,20 @@ const PipelineStage = ({
   startups, 
   onDrop, 
   onStartupClick,
-  onRemoveStartup 
+  onRemoveStartup,
+  onDeleteStage,
+  canDeleteStage
 }: { 
-  stage: typeof PIPELINE_STAGES[0];
+  stage: PipelineStage;
   startups: SavedStartupType[];
   onDrop: (startupId: string, newStage: string) => void;
   onStartupClick: (startupId: string) => void;
   onRemoveStartup: (id: string) => void;
+  onDeleteStage: (stageId: string) => void;
+  canDeleteStage: boolean;
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -216,6 +229,19 @@ const PipelineStage = ({
     }
   };
 
+  const handleDeleteStage = () => {
+    if (startups.length > 0) {
+      setShowDeleteConfirm(true);
+    } else {
+      onDeleteStage(stage.id);
+    }
+  };
+
+  const confirmDeleteStage = () => {
+    onDeleteStage(stage.id);
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -228,12 +254,18 @@ const PipelineStage = ({
       }`}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className={`font-bold text-lg px-3 py-1 rounded-full border ${stage.color}`}>
+        <h3 className={`font-bold text-lg px-3 py-1 rounded-full border ${stage.color} flex items-center gap-2`}>
           {stage.name}
+          <span className="text-sm font-normal">({startups.length})</span>
         </h3>
-        <span className="text-gray-400 text-sm">
-          {startups.length} startup{startups.length !== 1 ? 's' : ''}
-        </span>
+        {canDeleteStage && (
+          <button
+            onClick={handleDeleteStage}
+            className="text-gray-400 hover:text-red-400 p-1 rounded hover:bg-gray-700 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
       </div>
       
       <div className="space-y-2">
@@ -253,20 +285,51 @@ const PipelineStage = ({
           ))
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-bold text-white mb-4">Confirmar Exclusão</h3>
+            <p className="text-gray-300 mb-6">
+              Este estágio possui {startups.length} startup{startups.length !== 1 ? 's' : ''} mapeada{startups.length !== 1 ? 's' : ''}. 
+              Ao excluir o estágio, você perderá essas startups do pipeline. Deseja continuar?
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={confirmDeleteStage}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Sim, Excluir
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const PipelineBoard = ({ 
   startups, 
+  stages,
   onStageChange, 
   onStartupClick,
-  onRemoveStartup 
+  onRemoveStartup,
+  onDeleteStage
 }: { 
   startups: SavedStartupType[];
+  stages: PipelineStage[];
   onStageChange: (startupId: string, newStage: string) => void;
   onStartupClick: (startupId: string) => void;
   onRemoveStartup: (id: string) => void;
+  onDeleteStage: (stageId: string) => void;
 }) => {
   const handleDrop = async (startupId: string, newStage: string) => {
     try {
@@ -281,22 +344,47 @@ const PipelineBoard = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {PIPELINE_STAGES.map((stage) => {
-        const stageStartups = startups.filter(startup => startup.stage === stage.id);
-        
-        return (
-          <PipelineStage
-            key={stage.id}
-            stage={stage}
-            startups={stageStartups}
-            onDrop={handleDrop}
-            onStartupClick={onStartupClick}
-            onRemoveStartup={onRemoveStartup}
-          />
-        );
-      })}
-    </div>
+    <>
+      {/* Mobile Layout - One stage per row */}
+      <div className="grid grid-cols-1 gap-6 lg:hidden">
+        {stages.map((stage) => {
+          const stageStartups = startups.filter(startup => startup.stage === stage.id);
+          
+          return (
+            <PipelineStage
+              key={stage.id}
+              stage={stage}
+              startups={stageStartups}
+              onDrop={handleDrop}
+              onStartupClick={onStartupClick}
+              onRemoveStartup={onRemoveStartup}
+              onDeleteStage={onDeleteStage}
+              canDeleteStage={stages.length > 1}
+            />
+          );
+        })}
+      </div>
+      
+      {/* Desktop Layout - Multiple columns */}
+      <div className="hidden lg:grid gap-6" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
+        {stages.map((stage) => {
+          const stageStartups = startups.filter(startup => startup.stage === stage.id);
+          
+          return (
+            <PipelineStage
+              key={stage.id}
+              stage={stage}
+              startups={stageStartups}
+              onDrop={handleDrop}
+              onStartupClick={onStartupClick}
+              onRemoveStartup={onRemoveStartup}
+              onDeleteStage={onDeleteStage}
+              canDeleteStage={stages.length > 1}
+            />
+          );
+        })}
+      </div>
+    </>
   );
 };
 
@@ -362,6 +450,8 @@ const SavedStartups = () => {
   const [savedStartups, setSavedStartups] = useState<SavedStartupType[]>([]);
   const [selectedStartup, setSelectedStartup] = useState<StartupType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
+  const [showStageManager, setShowStageManager] = useState(false);
 
   useEffect(() => {
     const fetchSavedStartups = async () => {
@@ -407,7 +497,8 @@ const SavedStartups = () => {
     if (selectedStartup) {
       setSelectedStartup(null);
     } else {
-      navigate(-1);
+      // Always navigate back to chat when in Pipeline CRM
+      navigate('/');
     }
   };
 
@@ -423,6 +514,36 @@ const SavedStartups = () => {
     ));
   };
 
+  const handleStagesUpdate = (stages: PipelineStage[]) => {
+    setPipelineStages(stages);
+  };
+
+  const handleDeleteStage = async (stageId: string) => {
+    // Remove startups from deleted stage
+    const startupsToRemove = savedStartups.filter(startup => startup.stage === stageId);
+    
+    try {
+      // Delete startups from Firestore
+      await Promise.all(
+        startupsToRemove.map(startup => 
+          deleteDoc(doc(db, 'selectedStartups', startup.id))
+        )
+      );
+
+      // Update local state
+      setSavedStartups(prev => prev.filter(startup => startup.stage !== stageId));
+      
+      // Update stages
+      const updatedStages = pipelineStages.filter(stage => stage.id !== stageId);
+      setPipelineStages(updatedStages);
+    } catch (error) {
+      console.error('Error deleting stage and startups:', error);
+    }
+  };
+
+  // Calculate total startup count
+  const totalStartupCount = savedStartups.length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -434,7 +555,7 @@ const SavedStartups = () => {
   // Show startup detail card
   if (selectedStartup) {
     return (
-      <div className="min-h-screen bg-black p-8">
+      <div className="min-h-screen bg-black p-4 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={handleBack}
@@ -445,6 +566,34 @@ const SavedStartups = () => {
           </button>
 
           <StartupDetailCard startup={selectedStartup} />
+        </div>
+      </div>
+    );
+  }
+
+  // Show stage manager only
+  if (showStageManager) {
+    return (
+      <div className="min-h-screen bg-black">
+        <div className="flex flex-col p-3 border-b border-border">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowStageManager(false)}
+              className="text-gray-300 hover:text-white focus:outline-none"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex items-center gap-2 flex-1 ml-4">
+              <Settings size={20} className="text-gray-400" />
+              <h2 className="text-lg font-medium">Gerenciar Estágios</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-8">
+          <div className="max-w-4xl mx-auto">
+            <PipelineStageManager onStagesUpdate={handleStagesUpdate} />
+          </div>
         </div>
       </div>
     );
@@ -464,13 +613,22 @@ const SavedStartups = () => {
             <FolderOpen size={20} className="text-gray-400" />
             <h2 className="text-lg font-medium">Pipeline CRM</h2>
           </div>
-          <span className="text-sm text-gray-400">{savedStartups.length} startup{savedStartups.length !== 1 ? 's' : ''}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400">{totalStartupCount} startup{totalStartupCount !== 1 ? 's' : ''}</span>
+            <button
+              onClick={() => setShowStageManager(true)}
+              className="flex items-center gap-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+            >
+              <Settings size={16} />
+              Gerenciar Estágios
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          {savedStartups.length === 0 ? (
+          {totalStartupCount === 0 ? (
             <div className="text-center py-16">
               <FolderOpen size={64} className="text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Pipeline vazio</h3>
@@ -485,31 +643,14 @@ const SavedStartups = () => {
               </button>
             </div>
           ) : (
-            <>
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-white mb-4">Pipeline Overview</h3>
-                <div className="grid grid-cols-5 gap-4 mb-6">
-                  {PIPELINE_STAGES.map((stage) => {
-                    const count = savedStartups.filter(startup => startup.stage === stage.id).length;
-                    return (
-                      <div key={stage.id} className="text-center">
-                        <div className={`rounded-lg p-4 border-2 ${stage.color}`}>
-                          <div className="text-2xl font-bold">{count}</div>
-                          <div className="text-sm font-medium">{stage.name}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <PipelineBoard
-                startups={savedStartups}
-                onStageChange={handleStageChange}
-                onStartupClick={handleStartupInteractionClick}
-                onRemoveStartup={handleRemoveStartup}
-              />
-            </>
+            <PipelineBoard
+              startups={savedStartups}
+              stages={pipelineStages}
+              onStageChange={handleStageChange}
+              onStartupClick={handleStartupInteractionClick}
+              onRemoveStartup={handleRemoveStartup}
+              onDeleteStage={handleDeleteStage}
+            />
           )}
         </div>
       </div>
