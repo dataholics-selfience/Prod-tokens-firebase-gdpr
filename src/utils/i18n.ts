@@ -193,6 +193,74 @@ export interface Translations {
   french: string;
   german: string;
   italian: string;
+
+  // Additional Startup Card Translations
+  reasonForChoice: string;
+  backToList: string;
+  loadingStartups: string;
+  loadingTimeline: string;
+  startupNotFound: string;
+  loadingContacts: string;
+  noContactsRegistered: string;
+  addFirstContact: string;
+  contactAddedSuccess: string;
+  errorAddingContact: string;
+  contactUpdatedSuccess: string;
+  errorUpdatingContact: string;
+  contactRemovedSuccess: string;
+  errorRemovingContact: string;
+  manageContacts: string;
+  listContacts: string;
+  addWhatsAppNumber: string;
+  addPhoneNumber: string;
+  invalidPhoneNumber: string;
+  whatsAppNumberAddedSuccess: string;
+  errorAddingPhoneNumber: string;
+  emailRequired: string;
+  subjectRequired: string;
+  messageRequired: string;
+  emailSentSuccess: string;
+  whatsAppSentSuccess: string;
+  errorSendingMessage: string;
+  selectContact: string;
+  selectEmail: string;
+  selectPhone: string;
+  noWhatsAppRegistered: string;
+  emailTo: string;
+  whatsAppTo: string;
+  sentAt: string;
+  status: string;
+  sent: string;
+  delivered: string;
+  failed: string;
+  processing: string;
+  backToPipeline: string;
+  backToSavedStartups: string;
+  projectPlanning: string;
+  expectedResults: string;
+  competitiveAdvantages: string;
+  proofOfConcept: string;
+  phase: string;
+  duration: string;
+  description: string;
+  viewStartupList: string;
+  viewCompleteList: string;
+  startupListButton: string;
+  upgradeButton: string;
+  tokenLimitReached: string;
+  updatePlan: string;
+  processingChallenge: string;
+  creatingShortlist: string;
+  conductingMarketResearch: string;
+  generatingSelectionProcess: string;
+  creatingPOCs: string;
+  finalizingRecommendations: string;
+  searchingStartups: string;
+  qualifyingStartups: string;
+  researchingMarket: string;
+  selectingFinalStartups: string;
+  creatingPOCsForChallenge: string;
+  finalizingStartupList: string;
 }
 
 export const translations: Record<string, Translations> = {
@@ -391,6 +459,74 @@ export const translations: Record<string, Translations> = {
     french: 'Francês',
     german: 'Alemão',
     italian: 'Italiano',
+
+    // Additional Startup Card Translations
+    reasonForChoice: 'Motivo da escolha',
+    backToList: 'Voltar para lista',
+    loadingStartups: 'Carregando startups...',
+    loadingTimeline: 'Carregando timeline...',
+    startupNotFound: 'Startup não encontrada',
+    loadingContacts: 'Carregando contatos...',
+    noContactsRegistered: 'Nenhum contato cadastrado',
+    addFirstContact: 'Adicionar Primeiro Contato',
+    contactAddedSuccess: 'Contato adicionado com sucesso!',
+    errorAddingContact: 'Erro ao adicionar contato',
+    contactUpdatedSuccess: 'Contato atualizado com sucesso!',
+    errorUpdatingContact: 'Erro ao atualizar contato',
+    contactRemovedSuccess: 'Contato removido com sucesso!',
+    errorRemovingContact: 'Erro ao remover contato',
+    manageContacts: 'Gerenciar Contatos',
+    listContacts: 'Lista de Contatos',
+    addWhatsAppNumber: 'Adicionar Número do WhatsApp',
+    addPhoneNumber: 'Adicionar número de WhatsApp',
+    invalidPhoneNumber: 'Número de telefone inválido para WhatsApp',
+    whatsAppNumberAddedSuccess: 'Número de WhatsApp adicionado com sucesso!',
+    errorAddingPhoneNumber: 'Erro ao adicionar número de WhatsApp',
+    emailRequired: 'Email do destinatário é obrigatório',
+    subjectRequired: 'Assunto é obrigatório para emails',
+    messageRequired: 'Mensagem é obrigatória',
+    emailSentSuccess: 'Email enviado com sucesso!',
+    whatsAppSentSuccess: 'Mensagem WhatsApp enviada com sucesso!',
+    errorSendingMessage: 'Erro ao enviar mensagem',
+    selectContact: 'Selecione um contato',
+    selectEmail: 'Selecionar Email',
+    selectPhone: 'Selecionar Telefone',
+    noWhatsAppRegistered: 'Sem WhatsApp cadastrado',
+    emailTo: 'Para: ',
+    whatsAppTo: 'WhatsApp: ',
+    sentAt: 'Enviado em',
+    status: 'Status',
+    sent: 'Enviado',
+    delivered: 'Entregue',
+    failed: 'Falhou',
+    processing: 'Processando',
+    backToPipeline: 'Voltar para pipeline',
+    backToSavedStartups: 'Voltar para startups salvas',
+    projectPlanning: 'Planejamento do Projeto',
+    expectedResults: 'Resultados Esperados',
+    competitiveAdvantages: 'Vantagens Competitivas',
+    proofOfConcept: 'Provas de conceito',
+    phase: 'Fase',
+    duration: 'Duração',
+    description: 'Descrição',
+    viewStartupList: 'Ver Lista de Startups',
+    viewCompleteList: 'Ver lista completa',
+    startupListButton: 'Ver Lista de Startups',
+    upgradeButton: 'Atualizar Plano',
+    tokenLimitReached: 'Você atingiu o limite de tokens do seu plano',
+    updatePlan: 'Atualize seu plano para continuar inovando!',
+    processingChallenge: 'Processando desafio e buscando entre milhares de startups...',
+    creatingShortlist: 'Criando uma short list de startups qualificadas',
+    conductingMarketResearch: 'Realizando uma pesquisa de mercado e do desafio',
+    generatingSelectionProcess: 'Gerando um processo seletivo final de startups',
+    creatingPOCs: 'Criando as POCs para solucionar o desafio',
+    finalizingRecommendations: 'Finalizando a lista de indicação de startups para seu desafio!',
+    searchingStartups: 'Processando desafio e buscando entre milhares de startups...',
+    qualifyingStartups: 'Criando uma short list de startups qualificadas',
+    researchingMarket: 'Realizando uma pesquisa de mercado e do desafio',
+    selectingFinalStartups: 'Gerando um processo seletivo final de startups',
+    creatingPOCsForChallenge: 'Criando as POCs para solucionar o desafio',
+    finalizingStartupList: 'Finalizando a lista de indicação de startups para seu desafio!',
   },
   
   en: {
@@ -588,6 +724,74 @@ export const translations: Record<string, Translations> = {
     french: 'French',
     german: 'German',
     italian: 'Italian',
+
+    // Additional Startup Card Translations
+    reasonForChoice: 'Reason for choice',
+    backToList: 'Back to list',
+    loadingStartups: 'Loading startups...',
+    loadingTimeline: 'Loading timeline...',
+    startupNotFound: 'Startup not found',
+    loadingContacts: 'Loading contacts...',
+    noContactsRegistered: 'No contacts registered',
+    addFirstContact: 'Add First Contact',
+    contactAddedSuccess: 'Contact added successfully!',
+    errorAddingContact: 'Error adding contact',
+    contactUpdatedSuccess: 'Contact updated successfully!',
+    errorUpdatingContact: 'Error updating contact',
+    contactRemovedSuccess: 'Contact removed successfully!',
+    errorRemovingContact: 'Error removing contact',
+    manageContacts: 'Manage Contacts',
+    listContacts: 'Contact List',
+    addWhatsAppNumber: 'Add WhatsApp Number',
+    addPhoneNumber: 'Add WhatsApp number',
+    invalidPhoneNumber: 'Invalid phone number for WhatsApp',
+    whatsAppNumberAddedSuccess: 'WhatsApp number added successfully!',
+    errorAddingPhoneNumber: 'Error adding WhatsApp number',
+    emailRequired: 'Recipient email is required',
+    subjectRequired: 'Subject is required for emails',
+    messageRequired: 'Message is required',
+    emailSentSuccess: 'Email sent successfully!',
+    whatsAppSentSuccess: 'WhatsApp message sent successfully!',
+    errorSendingMessage: 'Error sending message',
+    selectContact: 'Select a contact',
+    selectEmail: 'Select Email',
+    selectPhone: 'Select Phone',
+    noWhatsAppRegistered: 'No WhatsApp registered',
+    emailTo: 'To: ',
+    whatsAppTo: 'WhatsApp: ',
+    sentAt: 'Sent at',
+    status: 'Status',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    failed: 'Failed',
+    processing: 'Processing',
+    backToPipeline: 'Back to pipeline',
+    backToSavedStartups: 'Back to saved startups',
+    projectPlanning: 'Project Planning',
+    expectedResults: 'Expected Results',
+    competitiveAdvantages: 'Competitive Advantages',
+    proofOfConcept: 'Proof of concept',
+    phase: 'Phase',
+    duration: 'Duration',
+    description: 'Description',
+    viewStartupList: 'View Startup List',
+    viewCompleteList: 'View complete list',
+    startupListButton: 'View Startup List',
+    upgradeButton: 'Upgrade Plan',
+    tokenLimitReached: 'You have reached your plan\'s token limit',
+    updatePlan: 'Upgrade your plan to continue innovating!',
+    processingChallenge: 'Processing challenge and searching among thousands of startups...',
+    creatingShortlist: 'Creating a shortlist of qualified startups',
+    conductingMarketResearch: 'Conducting market and challenge research',
+    generatingSelectionProcess: 'Generating final startup selection process',
+    creatingPOCs: 'Creating POCs to solve the challenge',
+    finalizingRecommendations: 'Finalizing startup recommendation list for your challenge!',
+    searchingStartups: 'Processing challenge and searching among thousands of startups...',
+    qualifyingStartups: 'Creating a shortlist of qualified startups',
+    researchingMarket: 'Conducting market and challenge research',
+    selectingFinalStartups: 'Generating final startup selection process',
+    creatingPOCsForChallenge: 'Creating POCs to solve the challenge',
+    finalizingStartupList: 'Finalizing startup recommendation list for your challenge!',
   },
   
   fr: {
@@ -745,7 +949,7 @@ export const translations: Record<string, Translations> = {
     upgradePlan: 'Mettre à niveau le plan',
     
     // Language Change Message
-    languageChangeMessage: 'Pourriez-vous changer la langue en allemand et commencer le questionnaire ?',
+    languageChangeMessage: 'Pourriez-vous changer la langue en français et commencer le questionnaire ?',
     
     // Common
     back: 'Retour',
@@ -785,6 +989,74 @@ export const translations: Record<string, Translations> = {
     french: 'Français',
     german: 'Allemand',
     italian: 'Italien',
+
+    // Additional Startup Card Translations
+    reasonForChoice: 'Raison du choix',
+    backToList: 'Retour à la liste',
+    loadingStartups: 'Chargement des startups...',
+    loadingTimeline: 'Chargement de la chronologie...',
+    startupNotFound: 'Startup non trouvée',
+    loadingContacts: 'Chargement des contacts...',
+    noContactsRegistered: 'Aucun contact enregistré',
+    addFirstContact: 'Ajouter le premier contact',
+    contactAddedSuccess: 'Contact ajouté avec succès!',
+    errorAddingContact: 'Erreur lors de l\'ajout du contact',
+    contactUpdatedSuccess: 'Contact mis à jour avec succès!',
+    errorUpdatingContact: 'Erreur lors de la mise à jour du contact',
+    contactRemovedSuccess: 'Contact supprimé avec succès!',
+    errorRemovingContact: 'Erreur lors de la suppression du contact',
+    manageContacts: 'Gérer les contacts',
+    listContacts: 'Liste des contacts',
+    addWhatsAppNumber: 'Ajouter un numéro WhatsApp',
+    addPhoneNumber: 'Ajouter un numéro WhatsApp',
+    invalidPhoneNumber: 'Numéro de téléphone invalide pour WhatsApp',
+    whatsAppNumberAddedSuccess: 'Numéro WhatsApp ajouté avec succès!',
+    errorAddingPhoneNumber: 'Erreur lors de l\'ajout du numéro WhatsApp',
+    emailRequired: 'L\'email du destinataire est requis',
+    subjectRequired: 'Le sujet est requis pour les emails',
+    messageRequired: 'Le message est requis',
+    emailSentSuccess: 'Email envoyé avec succès!',
+    whatsAppSentSuccess: 'Message WhatsApp envoyé avec succès!',
+    errorSendingMessage: 'Erreur lors de l\'envoi du message',
+    selectContact: 'Sélectionner un contact',
+    selectEmail: 'Sélectionner un email',
+    selectPhone: 'Sélectionner un téléphone',
+    noWhatsAppRegistered: 'Aucun WhatsApp enregistré',
+    emailTo: 'À: ',
+    whatsAppTo: 'WhatsApp: ',
+    sentAt: 'Envoyé le',
+    status: 'Statut',
+    sent: 'Envoyé',
+    delivered: 'Livré',
+    failed: 'Échoué',
+    processing: 'Traitement',
+    backToPipeline: 'Retour au pipeline',
+    backToSavedStartups: 'Retour aux startups sauvegardées',
+    projectPlanning: 'Planification du projet',
+    expectedResults: 'Résultats attendus',
+    competitiveAdvantages: 'Avantages concurrentiels',
+    proofOfConcept: 'Preuve de concept',
+    phase: 'Phase',
+    duration: 'Durée',
+    description: 'Description',
+    viewStartupList: 'Voir la liste des startups',
+    viewCompleteList: 'Voir la liste complète',
+    startupListButton: 'Voir la liste des startups',
+    upgradeButton: 'Mettre à niveau le plan',
+    tokenLimitReached: 'Vous avez atteint la limite de jetons de votre plan',
+    updatePlan: 'Mettez à niveau votre plan pour continuer à innover!',
+    processingChallenge: 'Traitement du défi et recherche parmi des milliers de startups...',
+    creatingShortlist: 'Création d\'une liste restreinte de startups qualifiées',
+    conductingMarketResearch: 'Réalisation d\'une étude de marché et du défi',
+    generatingSelectionProcess: 'Génération du processus de sélection final des startups',
+    creatingPOCs: 'Création des POCs pour résoudre le défi',
+    finalizingRecommendations: 'Finalisation de la liste de recommandations de startups pour votre défi!',
+    searchingStartups: 'Traitement du défi et recherche parmi des milliers de startups...',
+    qualifyingStartups: 'Création d\'une liste restreinte de startups qualifiées',
+    researchingMarket: 'Réalisation d\'une étude de marché et du défi',
+    selectingFinalStartups: 'Génération du processus de sélection final des startups',
+    creatingPOCsForChallenge: 'Création des POCs pour résoudre le défi',
+    finalizingStartupList: 'Finalisation de la liste de recommandations de startups pour votre défi!',
   },
   
   de: {
@@ -982,6 +1254,74 @@ export const translations: Record<string, Translations> = {
     french: 'Französisch',
     german: 'Deutsch',
     italian: 'Italienisch',
+
+    // Additional Startup Card Translations
+    reasonForChoice: 'Grund für die Wahl',
+    backToList: 'Zurück zur Liste',
+    loadingStartups: 'Startups laden...',
+    loadingTimeline: 'Timeline laden...',
+    startupNotFound: 'Startup nicht gefunden',
+    loadingContacts: 'Kontakte laden...',
+    noContactsRegistered: 'Keine Kontakte registriert',
+    addFirstContact: 'Ersten Kontakt hinzufügen',
+    contactAddedSuccess: 'Kontakt erfolgreich hinzugefügt!',
+    errorAddingContact: 'Fehler beim Hinzufügen des Kontakts',
+    contactUpdatedSuccess: 'Kontakt erfolgreich aktualisiert!',
+    errorUpdatingContact: 'Fehler beim Aktualisieren des Kontakts',
+    contactRemovedSuccess: 'Kontakt erfolgreich entfernt!',
+    errorRemovingContact: 'Fehler beim Entfernen des Kontakts',
+    manageContacts: 'Kontakte verwalten',
+    listContacts: 'Kontaktliste',
+    addWhatsAppNumber: 'WhatsApp-Nummer hinzufügen',
+    addPhoneNumber: 'WhatsApp-Nummer hinzufügen',
+    invalidPhoneNumber: 'Ungültige Telefonnummer für WhatsApp',
+    whatsAppNumberAddedSuccess: 'WhatsApp-Nummer erfolgreich hinzugefügt!',
+    errorAddingPhoneNumber: 'Fehler beim Hinzufügen der WhatsApp-Nummer',
+    emailRequired: 'Empfänger-E-Mail ist erforderlich',
+    subjectRequired: 'Betreff ist für E-Mails erforderlich',
+    messageRequired: 'Nachricht ist erforderlich',
+    emailSentSuccess: 'E-Mail erfolgreich gesendet!',
+    whatsAppSentSuccess: 'WhatsApp-Nachricht erfolgreich gesendet!',
+    errorSendingMessage: 'Fehler beim Senden der Nachricht',
+    selectContact: 'Kontakt auswählen',
+    selectEmail: 'E-Mail auswählen',
+    selectPhone: 'Telefon auswählen',
+    noWhatsAppRegistered: 'Kein WhatsApp registriert',
+    emailTo: 'An: ',
+    whatsAppTo: 'WhatsApp: ',
+    sentAt: 'Gesendet am',
+    status: 'Status',
+    sent: 'Gesendet',
+    delivered: 'Zugestellt',
+    failed: 'Fehlgeschlagen',
+    processing: 'Verarbeitung',
+    backToPipeline: 'Zurück zur Pipeline',
+    backToSavedStartups: 'Zurück zu gespeicherten Startups',
+    projectPlanning: 'Projektplanung',
+    expectedResults: 'Erwartete Ergebnisse',
+    competitiveAdvantages: 'Wettbewerbsvorteile',
+    proofOfConcept: 'Proof of Concept',
+    phase: 'Phase',
+    duration: 'Dauer',
+    description: 'Beschreibung',
+    viewStartupList: 'Startup-Liste anzeigen',
+    viewCompleteList: 'Vollständige Liste anzeigen',
+    startupListButton: 'Startup-Liste anzeigen',
+    upgradeButton: 'Plan upgraden',
+    tokenLimitReached: 'Sie haben das Token-Limit Ihres Plans erreicht',
+    updatePlan: 'Upgraden Sie Ihren Plan, um weiter zu innovieren!',
+    processingChallenge: 'Herausforderung verarbeiten und unter Tausenden von Startups suchen...',
+    creatingShortlist: 'Erstellen einer Shortlist qualifizierter Startups',
+    conductingMarketResearch: 'Durchführung von Markt- und Herausforderungsforschung',
+    generatingSelectionProcess: 'Generierung des finalen Startup-Auswahlprozesses',
+    creatingPOCs: 'Erstellen von POCs zur Lösung der Herausforderung',
+    finalizingRecommendations: 'Finalisierung der Startup-Empfehlungsliste für Ihre Herausforderung!',
+    searchingStartups: 'Herausforderung verarbeiten und unter Tausenden von Startups suchen...',
+    qualifyingStartups: 'Erstellen einer Shortlist qualifizierter Startups',
+    researchingMarket: 'Durchführung von Markt- und Herausforderungsforschung',
+    selectingFinalStartups: 'Generierung des finalen Startup-Auswahlprozesses',
+    creatingPOCsForChallenge: 'Erstellen von POCs zur Lösung der Herausforderung',
+    finalizingStartupList: 'Finalisierung der Startup-Empfehlungsliste für Ihre Herausforderung!',
   },
   
   it: {
@@ -1139,7 +1479,7 @@ export const translations: Record<string, Translations> = {
     upgradePlan: 'Aggiorna piano',
     
     // Language Change Message
-    languageChangeMessage: 'Potresti cambiare la lingua in Italiani e iniziare il questionario?',
+    languageChangeMessage: 'Potresti cambiare la lingua in italiano e iniziare il questionario?',
     
     // Common
     back: 'Indietro',
@@ -1179,6 +1519,74 @@ export const translations: Record<string, Translations> = {
     french: 'Francese',
     german: 'Tedesco',
     italian: 'Italiano',
+
+    // Additional Startup Card Translations
+    reasonForChoice: 'Motivo della scelta',
+    backToList: 'Torna alla lista',
+    loadingStartups: 'Caricamento startup...',
+    loadingTimeline: 'Caricamento timeline...',
+    startupNotFound: 'Startup non trovata',
+    loadingContacts: 'Caricamento contatti...',
+    noContactsRegistered: 'Nessun contatto registrato',
+    addFirstContact: 'Aggiungi primo contatto',
+    contactAddedSuccess: 'Contatto aggiunto con successo!',
+    errorAddingContact: 'Errore nell\'aggiunta del contatto',
+    contactUpdatedSuccess: 'Contatto aggiornato con successo!',
+    errorUpdatingContact: 'Errore nell\'aggiornamento del contatto',
+    contactRemovedSuccess: 'Contatto rimosso con successo!',
+    errorRemovingContact: 'Errore nella rimozione del contatto',
+    manageContacts: 'Gestisci contatti',
+    listContacts: 'Lista contatti',
+    addWhatsAppNumber: 'Aggiungi numero WhatsApp',
+    addPhoneNumber: 'Aggiungi numero WhatsApp',
+    invalidPhoneNumber: 'Numero di telefono non valido per WhatsApp',
+    whatsAppNumberAddedSuccess: 'Numero WhatsApp aggiunto con successo!',
+    errorAddingPhoneNumber: 'Errore nell\'aggiunta del numero WhatsApp',
+    emailRequired: 'L\'email del destinatario è richiesta',
+    subjectRequired: 'L\'oggetto è richiesto per le email',
+    messageRequired: 'Il messaggio è richiesto',
+    emailSentSuccess: 'Email inviata con successo!',
+    whatsAppSentSuccess: 'Messaggio WhatsApp inviato con successo!',
+    errorSendingMessage: 'Errore nell\'invio del messaggio',
+    selectContact: 'Seleziona un contatto',
+    selectEmail: 'Seleziona email',
+    selectPhone: 'Seleziona telefono',
+    noWhatsAppRegistered: 'Nessun WhatsApp registrato',
+    emailTo: 'A: ',
+    whatsAppTo: 'WhatsApp: ',
+    sentAt: 'Inviato il',
+    status: 'Stato',
+    sent: 'Inviato',
+    delivered: 'Consegnato',
+    failed: 'Fallito',
+    processing: 'Elaborazione',
+    backToPipeline: 'Torna alla pipeline',
+    backToSavedStartups: 'Torna alle startup salvate',
+    projectPlanning: 'Pianificazione del progetto',
+    expectedResults: 'Risultati attesi',
+    competitiveAdvantages: 'Vantaggi competitivi',
+    proofOfConcept: 'Proof of concept',
+    phase: 'Fase',
+    duration: 'Durata',
+    description: 'Descrizione',
+    viewStartupList: 'Visualizza lista startup',
+    viewCompleteList: 'Visualizza lista completa',
+    startupListButton: 'Visualizza lista startup',
+    upgradeButton: 'Aggiorna piano',
+    tokenLimitReached: 'Hai raggiunto il limite di token del tuo piano',
+    updatePlan: 'Aggiorna il tuo piano per continuare a innovare!',
+    processingChallenge: 'Elaborazione della sfida e ricerca tra migliaia di startup...',
+    creatingShortlist: 'Creazione di una shortlist di startup qualificate',
+    conductingMarketResearch: 'Conduzione di ricerca di mercato e della sfida',
+    generatingSelectionProcess: 'Generazione del processo di selezione finale delle startup',
+    creatingPOCs: 'Creazione di POC per risolvere la sfida',
+    finalizingRecommendations: 'Finalizzazione della lista di raccomandazioni startup per la tua sfida!',
+    searchingStartups: 'Elaborazione della sfida e ricerca tra migliaia di startup...',
+    qualifyingStartups: 'Creazione di una shortlist di startup qualificate',
+    researchingMarket: 'Conduzione di ricerca di mercato e della sfida',
+    selectingFinalStartups: 'Generazione del processo di selezione finale delle startup',
+    creatingPOCsForChallenge: 'Creazione di POC per risolvere la sfida',
+    finalizingStartupList: 'Finalizzazione della lista di raccomandazioni startup per la tua sfida!',
   },
 };
 

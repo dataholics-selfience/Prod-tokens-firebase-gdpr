@@ -82,7 +82,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     if (remainingTokens < cost) {
       await addMessage({
         role: 'assistant',
-        content: `Você atingiu o limite de tokens do seu plano ${tokenUsage.plan}. Atualize seu plano para continuar inovando!\n\n<upgrade-plan-button>Atualizar Plano</upgrade-plan-button>`
+        content: `${t.tokenLimitReached} ${tokenUsage.plan}. ${t.updatePlan}\n\n<upgrade-plan-button>${t.upgradeButton}</upgrade-plan-button>`
       });
       return false;
     }
@@ -214,7 +214,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
 
             await addMessage({
               role: 'assistant',
-              content: 'Encontrei algumas startups interessantes para seu desafio! Clique no botão abaixo para ver a lista completa.\n\n<startup-list-button>Ver Lista de Startups</startup-list-button>',
+              content: `${t.viewCompleteList}\n\n<startup-list-button>${t.startupListButton}</startup-list-button>`,
               hidden: false
             });
 
@@ -286,7 +286,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
           >
             <Rocket size={20} />
-            Ver Lista de Startups
+            {t.viewStartupList}
           </Link>
         </div>
       );
@@ -300,7 +300,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             to="/plans"
             className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
           >
-            Atualizar Plano
+            {t.upgradeButton}
           </Link>
         </div>
       );
@@ -402,7 +402,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
               )}
               {message.role === 'user' && (
                 <div className="flex items-center mb-2 justify-end">
-                  <span className="font-medium mr-2">Você</span>
+                  <span className="font-medium mr-2">{t.you || 'Você'}</span>
                   <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-semibold">
                     {userInitials}
                   </div>

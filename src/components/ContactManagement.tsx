@@ -10,6 +10,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { useTranslation } from '../utils/i18n';
 
 interface Contact {
   id: string;
@@ -37,6 +38,7 @@ interface StartupData {
 }
 
 const ContactManagement = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { startupId } = useParams<{ startupId: string }>();
   const [startupData, setStartupData] = useState<StartupData | null>(null);
@@ -219,10 +221,10 @@ const ContactManagement = () => {
         type: 'startup' 
       });
       setShowAddContact(false);
-      setStatus({ type: 'success', message: 'Contato adicionado com sucesso!' });
+      setStatus({ type: 'success', message: t.contactAddedSuccess });
     } catch (error) {
       console.error('Error adding contact:', error);
-      setStatus({ type: 'error', message: 'Erro ao adicionar contato' });
+      setStatus({ type: 'error', message: t.errorAddingContact });
     }
   };
 
@@ -269,10 +271,10 @@ const ContactManagement = () => {
       ));
       
       setEditingContact(null);
-      setStatus({ type: 'success', message: 'Contato atualizado com sucesso!' });
+      setStatus({ type: 'success', message: t.contactUpdatedSuccess });
     } catch (error) {
       console.error('Error updating contact:', error);
-      setStatus({ type: 'error', message: 'Erro ao atualizar contato' });
+      setStatus({ type: 'error', message: t.errorUpdatingContact });
     }
   };
 
@@ -289,10 +291,10 @@ const ContactManagement = () => {
       });
 
       setContacts(prev => prev.filter(contact => contact.id !== contactId));
-      setStatus({ type: 'success', message: 'Contato removido com sucesso!' });
+      setStatus({ type: 'success', message: t.contactRemovedSuccess });
     } catch (error) {
       console.error('Error deleting contact:', error);
-      setStatus({ type: 'error', message: 'Erro ao remover contato' });
+      setStatus({ type: 'error', message: t.errorRemovingContact });
     }
   };
 
@@ -303,7 +305,7 @@ const ContactManagement = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando contatos...</div>
+        <div className="text-white">{t.loadingContacts}</div>
       </div>
     );
   }
@@ -311,7 +313,7 @@ const ContactManagement = () => {
   if (!startupData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Startup não encontrada</div>
+        <div className="text-white">{t.startupNotFound}</div>
       </div>
     );
   }
@@ -329,7 +331,7 @@ const ContactManagement = () => {
           </button>
           <div className="flex items-center gap-2 flex-1 ml-4">
             <Building2 size={20} className="text-gray-400" />
-            <h2 className="text-lg font-medium">Gestão de Contatos - {startupData.startupName}</h2>
+            <h2 className="text-lg font-medium">{t.contactManagement} - {startupData.startupName}</h2>
           </div>
         </div>
       </div>
@@ -337,13 +339,13 @@ const ContactManagement = () => {
       <div className="p-4 lg:p-8 max-w-6xl mx-auto">
         {/* Add Contact Button */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <h1 className="text-2xl font-bold text-white">Contatos</h1>
+          <h1 className="text-2xl font-bold text-white">{t.contacts}</h1>
           <button
             onClick={() => setShowAddContact(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             <UserPlus size={16} />
-            Adicionar Contato
+            {t.addContact}
           </button>
         </div>
 
@@ -361,18 +363,18 @@ const ContactManagement = () => {
         {/* Add Contact Form */}
         {showAddContact && (
           <div className="bg-gray-800 rounded-lg p-6 mb-8">
-            <h3 className="text-lg font-bold text-white mb-4">Novo Contato</h3>
+            <h3 className="text-lg font-bold text-white mb-4">{t.newContact}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <input
                 type="text"
-                placeholder="Nome *"
+                placeholder={`${t.contactName} *`}
                 value={newContact.name}
                 onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
-                placeholder="Cargo/Função"
+                placeholder={t.contactRole}
                 value={newContact.role}
                 onChange={(e) => setNewContact(prev => ({ ...prev, role: e.target.value }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -381,7 +383,7 @@ const ContactManagement = () => {
 
             {/* Multiple Emails */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Emails</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t.emails}</label>
               {(newContact.emails || ['']).map((email, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                   <input
@@ -409,13 +411,13 @@ const ContactManagement = () => {
                 onClick={() => handleAddEmail(newContact, setNewContact)}
                 className="text-blue-400 hover:text-blue-300 text-sm"
               >
-                + Adicionar outro email
+                + {t.addEmail}
               </button>
             </div>
 
             {/* Multiple Phones */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Telefones/WhatsApp</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t.phones}</label>
               {(newContact.phones || ['']).map((phone, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                   <input
@@ -443,7 +445,7 @@ const ContactManagement = () => {
                 onClick={() => handleAddPhone(newContact, setNewContact)}
                 className="text-blue-400 hover:text-blue-300 text-sm"
               >
-                + Adicionar outro telefone
+                + {t.addPhone}
               </button>
             </div>
 
@@ -470,8 +472,8 @@ const ContactManagement = () => {
                 onChange={(e) => setNewContact(prev => ({ ...prev, type: e.target.value as 'startup' | 'founder' }))}
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="startup">Startup</option>
-                <option value="founder">Fundador</option>
+                <option value="startup">{t.startup}</option>
+                <option value="founder">{t.founder}</option>
               </select>
               <div className="flex gap-2">
                 <button
@@ -480,7 +482,7 @@ const ContactManagement = () => {
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
                 >
                   <Save size={16} />
-                  Salvar
+                  {t.save}
                 </button>
                 <button
                   onClick={() => {
@@ -498,7 +500,7 @@ const ContactManagement = () => {
                   className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
                   <X size={16} />
-                  Cancelar
+                  {t.cancel}
                 </button>
               </div>
             </div>
@@ -514,14 +516,14 @@ const ContactManagement = () => {
                 <div className="space-y-4">
                   <input
                     type="text"
-                    placeholder="Nome *"
+                    placeholder={`${t.contactName} *`}
                     value={editingContact.name}
                     onChange={(e) => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
-                    placeholder="Cargo/Função"
+                    placeholder={t.contactRole}
                     value={editingContact.role || ''}
                     onChange={(e) => setEditingContact(prev => prev ? { ...prev, role: e.target.value } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -529,7 +531,7 @@ const ContactManagement = () => {
                   
                   {/* Multiple Emails in Edit */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Emails</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.emails}</label>
                     {(editingContact.emails || ['']).map((email, index) => (
                       <div key={index} className="flex gap-2 mb-2">
                         <input
@@ -557,13 +559,13 @@ const ContactManagement = () => {
                       onClick={() => handleAddEmail(editingContact, (data) => setEditingContact(data as Contact))}
                       className="text-blue-400 hover:text-blue-300 text-sm"
                     >
-                      + Adicionar outro email
+                      + {t.addEmail}
                     </button>
                   </div>
 
                   {/* Multiple Phones in Edit */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Telefones/WhatsApp</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.phones}</label>
                     {(editingContact.phones || ['']).map((phone, index) => (
                       <div key={index} className="flex gap-2 mb-2">
                         <input
@@ -591,7 +593,7 @@ const ContactManagement = () => {
                       onClick={() => handleAddPhone(editingContact, (data) => setEditingContact(data as Contact))}
                       className="text-blue-400 hover:text-blue-300 text-sm"
                     >
-                      + Adicionar outro telefone
+                      + {t.addPhone}
                     </button>
                   </div>
 
@@ -614,8 +616,8 @@ const ContactManagement = () => {
                     onChange={(e) => setEditingContact(prev => prev ? { ...prev, type: e.target.value as 'startup' | 'founder' } : null)}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="startup">Startup</option>
-                    <option value="founder">Fundador</option>
+                    <option value="startup">{t.startup}</option>
+                    <option value="founder">{t.founder}</option>
                   </select>
                   <div className="flex gap-2">
                     <button
@@ -623,14 +625,14 @@ const ContactManagement = () => {
                       className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
                       <Save size={16} />
-                      Salvar
+                      {t.save}
                     </button>
                     <button
                       onClick={() => setEditingContact(null)}
                       className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                     >
                       <X size={16} />
-                      Cancelar
+                      {t.cancel}
                     </button>
                   </div>
                 </div>
@@ -717,7 +719,7 @@ const ContactManagement = () => {
                     <div className="flex items-center gap-3">
                       <Building2 size={16} className="text-purple-400" />
                       <span className="text-gray-300">
-                        {contact.type === 'startup' ? 'Startup' : 'Fundador'}
+                        {contact.type === 'startup' ? t.startup : t.founder}
                       </span>
                     </div>
                   </div>
@@ -730,7 +732,7 @@ const ContactManagement = () => {
         {contacts.length === 0 && (
           <div className="text-center py-12">
             <User size={64} className="text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Nenhum contato cadastrado</h3>
+            <h3 className="text-xl font-bold text-white mb-2">{t.noContactsRegistered}</h3>
             <p className="text-gray-400 mb-6">
               Adicione contatos para facilitar o envio de mensagens
             </p>
@@ -739,7 +741,7 @@ const ContactManagement = () => {
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors mx-auto"
             >
               <UserPlus size={20} />
-              Adicionar Primeiro Contato
+              {t.addFirstContact}
             </button>
           </div>
         )}

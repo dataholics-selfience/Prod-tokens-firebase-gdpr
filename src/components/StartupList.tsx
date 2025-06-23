@@ -10,12 +10,15 @@ import { db, auth } from '../firebase';
 import { StartupListType, StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useTranslation } from '../utils/i18n';
 
 const StarRating = ({ rating }: { rating: number }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-gray-800 rounded-lg p-3 flex flex-col items-center">
       <span className="text-3xl font-extrabold text-white">{rating}</span>
-      <div className="text-sm text-gray-400 mt-1">Match Score</div>
+      <div className="text-sm text-gray-400 mt-1">{t.matchScore}</div>
       <div className="flex items-center gap-1 mt-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
@@ -34,6 +37,8 @@ const StarRating = ({ rating }: { rating: number }) => {
 };
 
 const ProjectTimeline = ({ planning }: { planning: StartupListType['projectPlanning'] }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:via-purple-500 before:to-pink-500">
       {planning.map((phase, index) => (
@@ -53,10 +58,12 @@ const ProjectTimeline = ({ planning }: { planning: StartupListType['projectPlann
 };
 
 const ResultsSection = ({ data }: { data: StartupListType }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 p-6 rounded-xl">
-        <h3 className="text-xl font-bold text-white mb-4">Resultados Previstos</h3>
+        <h3 className="text-xl font-bold text-white mb-4">{t.expectedResults}</h3>
         <ul className="space-y-4">
           {data.expectedResults.map((result, index) => (
             <li key={index} className="flex items-start gap-3">
@@ -67,7 +74,7 @@ const ResultsSection = ({ data }: { data: StartupListType }) => {
         </ul>
       </div>
       <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-6 rounded-xl">
-        <h3 className="text-xl font-bold text-white mb-4">Vantagens Competitivas</h3>
+        <h3 className="text-xl font-bold text-white mb-4">{t.competitiveAdvantages}</h3>
         <ul className="space-y-4">
           {data.competitiveAdvantages.map((advantage, index) => (
             <li key={index} className="flex items-start gap-3">
@@ -82,42 +89,44 @@ const ResultsSection = ({ data }: { data: StartupListType }) => {
 };
 
 const SocialLinks = ({ startup, className = "" }: { startup: StartupType; className?: string }) => {
+  const { t } = useTranslation();
+  
   const links: SocialLink[] = [
     {
       type: 'website',
       url: startup.website,
       icon: Globe,
-      label: 'Website'
+      label: t.website
     },
     {
       type: 'email',
       url: `mailto:${startup.email}`,
       icon: Mail,
-      label: 'Email'
+      label: t.email
     },
     ...(startup.socialLinks?.linkedin ? [{
       type: 'linkedin',
       url: startup.socialLinks.linkedin,
       icon: Linkedin,
-      label: 'LinkedIn'
+      label: t.linkedin
     }] : []),
     ...(startup.socialLinks?.facebook ? [{
       type: 'facebook',
       url: startup.socialLinks.facebook,
       icon: Facebook,
-      label: 'Facebook'
+      label: t.facebook
     }] : []),
     ...(startup.socialLinks?.twitter ? [{
       type: 'twitter',
       url: startup.socialLinks.twitter,
       icon: Twitter,
-      label: 'Twitter'
+      label: t.twitter
     }] : []),
     ...(startup.socialLinks?.instagram ? [{
       type: 'instagram',
       url: startup.socialLinks.instagram,
       icon: Instagram,
-      label: 'Instagram'
+      label: t.instagram
     }] : [])
   ].filter(link => link.url);
 
@@ -153,6 +162,7 @@ const StartupCard = ({
   challengeId: string;
   onStartupSaved: () => void;
 }) => {
+  const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [savedDocId, setSavedDocId] = useState<string | null>(null);
@@ -245,17 +255,17 @@ const StartupCard = ({
               {isSaved ? (
                 <>
                   <X size={16} />
-                  Selecionada
+                  {t.selected}
                 </>
               ) : isSaving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-                  Salvando...
+                  {t.saving}
                 </>
               ) : (
                 <>
                   <Plus size={16} />
-                  Selecionar startup
+                  {t.selectStartup}
                 </>
               )}
             </button>
@@ -309,6 +319,8 @@ const StartupCard = ({
 };
 
 const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6">
       <div className="flex justify-between items-start mb-4">
@@ -322,37 +334,37 @@ const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-gray-300">
           <Calendar className="text-blue-400" size={16} />
-          <span className="text-gray-400">Fundação:</span>
+          <span className="text-gray-400">{t.founded}:</span>
           {startup.foundedYear}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <Building2 className="text-purple-400" size={16} />
-          <span className="text-gray-400">Categoria:</span>
+          <span className="text-gray-400">{t.category}:</span>
           {startup.category}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <Box className="text-pink-400" size={16} />
-          <span className="text-gray-400">Vertical:</span>
+          <span className="text-gray-400">{t.vertical}:</span>
           {startup.vertical}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <MapPin className="text-emerald-400" size={16} />
-          <span className="text-gray-400">Localização:</span>
+          <span className="text-gray-400">{t.location}:</span>
           {startup.city}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <Users className="text-blue-400" size={16} />
-          <span className="text-gray-400">Tamanho da Equipe:</span>
+          <span className="text-gray-400">{t.teamSize}:</span>
           {startup.teamSize}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <Briefcase className="text-purple-400" size={16} />
-          <span className="text-gray-400">Modelo de Negócio:</span>
+          <span className="text-gray-400">{t.businessModel}:</span>
           {startup.businessModel}
         </div>
         <div className="flex items-center gap-2 text-gray-300">
           <Globe className="text-pink-400" size={16} />
-          <span className="text-gray-400">Status IPO:</span>
+          <span className="text-gray-400">{t.ipoStatus}:</span>
           {startup.ipoStatus}
         </div>
       </div>
@@ -366,6 +378,7 @@ const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
 };
 
 const StartupList = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [startupData, setStartupData] = useState<StartupListType | null>(null);
   const [selectedStartup, setSelectedStartup] = useState<StartupType | null>(null);
@@ -411,7 +424,7 @@ const StartupList = () => {
   if (!startupData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
+        <div className="text-white">{t.loadingStartups}</div>
       </div>
     );
   }
@@ -429,7 +442,7 @@ const StartupList = () => {
             className="flex items-center text-gray-400 hover:text-white mb-8"
           >
             <ArrowLeft size={20} className="mr-2" />
-            Voltar para lista
+            {t.backToList}
           </button>
 
           <StartupDetailCard startup={selectedStartup} />
@@ -473,7 +486,7 @@ const StartupList = () => {
 
           <div className="space-y-16">
             <section>
-              <h2 className="text-2xl font-bold text-white mb-8">Provas de conceito</h2>
+              <h2 className="text-2xl font-bold text-white mb-8">{t.proofOfConcept}</h2>
               <ProjectTimeline planning={startupData.projectPlanning} />
             </section>
 

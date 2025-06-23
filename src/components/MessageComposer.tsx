@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Mail, Phone, Send, Smartphone, 
-  User, Building2, Plus, Users, ChevronDown, Linkedin, Instagram
+  User, Building2, Clock, CheckCircle, AlertCircle,
+  Globe, Plus, Users, Edit, ChevronDown, Linkedin, Instagram
 } from 'lucide-react';
 import { 
   collection, 
@@ -15,6 +16,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { useTranslation } from '../utils/i18n';
 
 interface Contact {
   id: string;
@@ -49,6 +51,7 @@ const EVOLUTION_API_CONFIG = {
 };
 
 const MessageComposer = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { startupId } = useParams<{ startupId: string }>();
   const [startupData, setStartupData] = useState<StartupData | null>(null);
@@ -251,10 +254,10 @@ const MessageComposer = () => {
       ));
       setNewPhoneNumber('');
       setShowPhoneInput(false);
-      setStatus({ type: 'success', message: 'Número de WhatsApp adicionado com sucesso!' });
+      setStatus({ type: 'success', message: t.whatsAppNumberAddedSuccess });
     } catch (error) {
       console.error('Error adding phone number:', error);
-      setStatus({ type: 'error', message: 'Erro ao adicionar número de WhatsApp' });
+      setStatus({ type: 'error', message: t.errorAddingPhoneNumber });
     }
   };
 
@@ -262,7 +265,7 @@ const MessageComposer = () => {
     if (!message.trim() || !auth.currentUser || !startupData || !selectedContact) return;
 
     if (messageType === 'email' && !subject.trim()) {
-      setStatus({ type: 'error', message: 'Assunto é obrigatório para emails' });
+      setStatus({ type: 'error', message: t.subjectRequired });
       return;
     }
 
@@ -270,12 +273,12 @@ const MessageComposer = () => {
     const selectedPhone = selectedContact.phones?.[selectedPhoneIndex];
 
     if (messageType === 'email' && !selectedEmail) {
-      setStatus({ type: 'error', message: 'Email do destinatário é obrigatório' });
+      setStatus({ type: 'error', message: t.emailRequired });
       return;
     }
 
     if (messageType === 'whatsapp' && (!selectedPhone || !validatePhoneNumber(selectedPhone))) {
-      setStatus({ type: 'error', message: 'Número de telefone inválido para WhatsApp' });
+      setStatus({ type: 'error', message: t.invalidPhoneNumber });
       return;
     }
 
@@ -424,7 +427,7 @@ const MessageComposer = () => {
 
         setStatus({ 
           type: 'success', 
-          message: `${messageType === 'email' ? 'Email' : 'Mensagem WhatsApp'} enviada com sucesso!` 
+          message: messageType === 'email' ? t.emailSentSuccess : t.whatsAppSentSuccess
         });
 
         // Navigate back to timeline immediately
@@ -436,7 +439,7 @@ const MessageComposer = () => {
       console.error('Error sending message:', error);
       setStatus({ 
         type: 'error', 
-        message: error instanceof Error ? error.message : 'Erro ao enviar mensagem' 
+        message: error instanceof Error ? error.message : t.errorSendingMessage
       });
     } finally {
       setIsSending(false);
@@ -454,7 +457,7 @@ const MessageComposer = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
+        <div className="text-white">{t.loading}</div>
       </div>
     );
   }
@@ -462,7 +465,7 @@ const MessageComposer = () => {
   if (!startupData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Startup não encontrada</div>
+        <div className="text-white">{t.startupNotFound}</div>
       </div>
     );
   }
@@ -480,7 +483,7 @@ const MessageComposer = () => {
           </button>
           <div className="flex items-center gap-2 flex-1 ml-4">
             <Building2 size={20} className="text-gray-400" />
-            <h2 className="text-lg font-medium">Nova Mensagem - {startupData.startupName}</h2>
+            <h2 className="text-lg font-medium">{t.newMessage} - {startupData.startupName}</h2>
           </div>
         </div>
       </div>
@@ -488,13 +491,13 @@ const MessageComposer = () => {
       <div className="p-4 lg:p-8 max-w-4xl mx-auto">
         <div className="bg-gray-800 rounded-lg p-4 lg:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
-            <h1 className="text-xl lg:text-2xl font-bold text-white">Compor Mensagem</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-white">{t.composeMessage}</h1>
             <button
               onClick={handleManageContacts}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
             >
               <Users size={16} />
-              Gerenciar Contatos
+              {t.manageContacts}
             </button>
           </div>
 
@@ -527,7 +530,7 @@ const MessageComposer = () => {
           {/* Contact Selection Dropdown */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Destinatário
+              {t.recipient}
             </label>
             <div className="relative">
               <button
@@ -537,7 +540,7 @@ const MessageComposer = () => {
                 <div className="flex items-center gap-3">
                   <User size={20} className="text-blue-400" />
                   <div className="text-left">
-                    <div className="font-medium">{selectedContact?.name || 'Selecione um contato'}</div>
+                    <div className="font-medium">{selectedContact?.name || t.selectContact}</div>
                     {selectedContact && (
                       <div className="text-sm text-gray-400">
                         {messageType === 'email' && selectedContact.emails && selectedContact.emails.length > 0 && (
@@ -602,7 +605,7 @@ const MessageComposer = () => {
                             </div>
                           )}
                           {messageType === 'whatsapp' && (!contact.phones || contact.phones.length === 0) && (
-                            <div className="text-sm text-yellow-400">Sem WhatsApp cadastrado</div>
+                            <div className="text-sm text-yellow-400">{t.noWhatsAppRegistered}</div>
                           )}
                           {contact.linkedin && (
                             <div className="text-xs text-blue-400 flex items-center gap-1">
@@ -617,7 +620,7 @@ const MessageComposer = () => {
                             </div>
                           )}
                           <div className="text-xs text-gray-500 mt-1">
-                            {contact.type === 'startup' ? 'Startup' : 'Fundador'}
+                            {contact.type === 'startup' ? t.startup : t.founder}
                           </div>
                         </div>
                       </div>
@@ -632,7 +635,7 @@ const MessageComposer = () => {
           {selectedContact && messageType === 'email' && selectedContact.emails && selectedContact.emails.length > 1 && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Selecionar Email
+                {t.selectEmail}
               </label>
               <select
                 value={selectedEmailIndex}
@@ -651,7 +654,7 @@ const MessageComposer = () => {
           {selectedContact && messageType === 'whatsapp' && selectedContact.phones && selectedContact.phones.length > 1 && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Selecionar Telefone
+                {t.selectPhone}
               </label>
               <select
                 value={selectedPhoneIndex}
@@ -670,7 +673,7 @@ const MessageComposer = () => {
           {/* Phone Number Input for WhatsApp */}
           {showPhoneInput && (
             <div className="mb-6 bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
-              <h4 className="text-yellow-400 font-medium mb-3">Adicionar Número do WhatsApp</h4>
+              <h4 className="text-yellow-400 font-medium mb-3">{t.addWhatsAppNumber}</h4>
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="tel"
@@ -685,7 +688,7 @@ const MessageComposer = () => {
                     disabled={!newPhoneNumber.trim()}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
                   >
-                    Adicionar
+                    {t.add}
                   </button>
                   <button
                     onClick={() => {
@@ -694,7 +697,7 @@ const MessageComposer = () => {
                     }}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors"
                   >
-                    Cancelar
+                    {t.cancel}
                   </button>
                 </div>
               </div>
@@ -705,7 +708,7 @@ const MessageComposer = () => {
           {messageType === 'email' && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Assunto *
+                {t.subject} *
               </label>
               <input
                 type="text"
@@ -720,7 +723,7 @@ const MessageComposer = () => {
           {/* Message */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Mensagem *
+              {t.message} *
             </label>
             <textarea
               value={message}
@@ -758,12 +761,12 @@ const MessageComposer = () => {
               {isSending ? (
                 <>
                   <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
-                  Enviando...
+                  {t.sending}
                 </>
               ) : (
                 <>
                   <Send size={20} />
-                  Enviar {messageType === 'email' ? 'Email' : 'WhatsApp'}
+                  {messageType === 'email' ? t.sendEmail : t.sendWhatsApp}
                 </>
               )}
             </button>

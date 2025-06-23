@@ -17,6 +17,7 @@ import {
 import { db, auth } from '../firebase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useTranslation } from '../utils/i18n';
 
 interface StartupData {
   id: string;
@@ -85,6 +86,7 @@ interface StartupInteractionTimelineProps {
 }
 
 const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { startupId } = useParams<{ startupId: string }>();
   const [startupData, setStartupData] = useState<StartupData | null>(null);
@@ -218,7 +220,7 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando timeline...</div>
+        <div className="text-white">{t.loadingTimeline}</div>
       </div>
     );
   }
@@ -226,7 +228,7 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
   if (!startupData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Startup não encontrada</div>
+        <div className="text-white">{t.startupNotFound}</div>
       </div>
     );
   }
@@ -253,14 +255,14 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
                 className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
               >
                 <Plus size={14} />
-                Novo Contato
+                {t.addContact}
               </button>
               <button
                 onClick={handleContactsList}
                 className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
               >
                 <Users size={14} />
-                Lista de Contatos
+                {t.listContacts}
               </button>
             </div>
           </div>
@@ -271,29 +273,29 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
         {/* Timeline Section */}
         <div className="bg-gray-800 rounded-lg p-4 lg:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
-            <h3 className="text-lg font-bold text-white">Timeline de Interações</h3>
+            <h3 className="text-lg font-bold text-white">{t.interactionTimeline}</h3>
             <button
               onClick={handleNewMessage}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm lg:text-base"
             >
               <Edit size={16} />
-              Nova Mensagem
+              {t.newMessage}
             </button>
           </div>
           
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <MessageSquare size={64} className="text-gray-600 mx-auto mb-4" />
-              <h4 className="text-xl font-bold text-white mb-2">Nenhuma interação ainda</h4>
+              <h4 className="text-xl font-bold text-white mb-2">{t.noInteractions}</h4>
               <p className="text-gray-400 mb-6">
-                Comece a interação com esta startup enviando sua primeira mensagem
+                {t.firstMessage}
               </p>
               <button
                 onClick={handleNewMessage}
                 className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors mx-auto"
               >
                 <Edit size={20} />
-                Enviar Primeira Mensagem
+                {t.sendFirstMessage}
               </button>
             </div>
           ) : (
@@ -304,7 +306,7 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
                     <div className="flex items-center gap-3">
                       {getMessageIcon(message.messageType)}
                       <span className="font-medium text-white text-base lg:text-lg">
-                        {message.messageType === 'email' ? 'Email' : 'WhatsApp'} para {message.recipientName}
+                        {message.messageType === 'email' ? 'Email' : 'WhatsApp'} {t.emailTo} {message.recipientName}
                       </span>
                       {getStatusIcon(message.status)}
                     </div>
@@ -315,14 +317,14 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
                   
                   {message.subject && (
                     <div className="mb-3">
-                      <span className="text-sm text-gray-400">Assunto: </span>
+                      <span className="text-sm text-gray-400">{t.subject}: </span>
                       <span className="text-white font-medium">{message.subject}</span>
                     </div>
                   )}
                   
                   <div className="mb-3">
                     <span className="text-sm text-gray-400">
-                      {message.messageType === 'email' ? 'Para: ' : 'WhatsApp: '}
+                      {message.messageType === 'email' ? `${t.emailTo}` : `${t.whatsAppTo}`}
                     </span>
                     <span className="text-white">
                       {message.messageType === 'email' 
@@ -340,7 +342,7 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
                     <div className="mt-4 p-4 bg-green-900/30 border border-green-800 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <User size={16} className="text-green-400" />
-                        <span className="text-sm text-green-400 font-medium">Resposta recebida</span>
+                        <span className="text-sm text-green-400 font-medium">{t.responseReceived}</span>
                         <span className="text-xs text-gray-400">
                           {message.responseAt && formatDate(message.responseAt)}
                         </span>
