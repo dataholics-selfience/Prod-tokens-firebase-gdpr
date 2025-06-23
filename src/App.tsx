@@ -13,10 +13,13 @@ import Plans from './components/Plans';
 import EmailVerification from './components/auth/EmailVerification';
 import AccountDeleted from './components/AccountDeleted';
 import StartupList from './components/StartupList';
+import SavedStartups from './components/SavedStartups';
+import StartupInteractionTimeline from './components/StartupInteractionTimeline';
+import ContactManagement from './components/ContactManagement';
+import MessageComposer from './components/MessageComposer';
 import JediSuccess from './pages/plans/success/jedi';
 import MestreJediSuccess from './pages/plans/success/mestrejedi';
 import MestreYodaSuccess from './pages/plans/success/mestreyoda';
-import Terms from './components/Terms';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -62,15 +65,37 @@ function App() {
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
         <Route path="/verify-email" element={<EmailVerification />} />
         <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/new-challenge" element={<NewChallenge />} />
+        <Route path="/new-challenge" element={user?.emailVerified ? <NewChallenge /> : <Navigate to="/verify-email" replace />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/startups" element={user?.emailVerified ? <StartupList /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/saved-startups" element={user?.emailVerified ? <SavedStartups /> : <Navigate to="/verify-email" replace />} />
+        <Route 
+          path="/startup/:startupId/timeline" 
+          element={
+            user?.emailVerified ? (
+              <StartupInteractionTimeline onBack={() => window.history.back()} />
+            ) : (
+              <Navigate to="/verify-email" replace />
+            )
+          } 
+        />
+        <Route path="/startup/:startupId/contacts" element={user?.emailVerified ? <ContactManagement /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/startup/:startupId/message" element={user?.emailVerified ? <MessageComposer /> : <Navigate to="/verify-email" replace />} />
         <Route path="/account-deleted" element={<AccountDeleted />} />
         <Route path="/plans/success/jedi" element={<JediSuccess />} />
         <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
         <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/" element={<Layout />} />
+        <Route path="/" element={
+          user ? (
+            user.emailVerified ? (
+              <Layout />
+            ) : (
+              <Navigate to="/verify-email" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

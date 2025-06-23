@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import Sidebar from './Sidebar';
 import ChatInterface from './ChatInterface';
@@ -21,61 +21,48 @@ const Layout = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const publicUserId = localStorage.getItem('publicUserId');
-    const fetchChallenges = async () => {
-      let challengesQuery;
-      if (auth.currentUser) {
-        challengesQuery = query(
-          collection(db, 'challenges'),
-          where('userId', '==', auth.currentUser.uid),
-          orderBy('createdAt', 'desc')
-        );
-      } else if (publicUserId) {
-        challengesQuery = query(
-          collection(db, 'challenges'),
-          where('userId', '==', publicUserId),
-          orderBy('createdAt', 'desc')
-        );
+    if (!auth.currentUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    const challengesQuery = query(
+      collection(db, 'challenges'),
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
+      const newChallenges = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChallengeType[];
+      
+      setChallenges(newChallenges);
+
+      if (newChallenges.length === 0) {
+        const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+        setMessages([{
+          id: 'welcome',
+          role: 'assistant',
+          content: randomMessage,
+          timestamp: new Date().toISOString()
+        }]);
+      } else if (!currentChallengeId) {
+        setCurrentChallengeId(newChallenges[0].id);
       }
+      
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Error fetching challenges:', error);
+      setIsLoading(false);
+    });
 
-      if (challengesQuery) {
-        const unsubscribe = onSnapshot(challengesQuery, (snapshot) => {
-          const newChallenges = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as ChallengeType[];
-          
-          setChallenges(newChallenges);
-          
-          if (newChallenges.length === 0) {
-            const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-            setMessages([{
-              id: 'welcome',
-              role: 'assistant',
-              content: randomMessage,
-              timestamp: new Date().toISOString()
-            }]);
-          } else if (!currentChallengeId) {
-            setCurrentChallengeId(newChallenges[0].id);
-          }
-          
-          setIsLoading(false);
-        }, (error) => {
-          console.error('Error fetching challenges:', error);
-          setIsLoading(false);
-        });
-
-        return () => unsubscribe();
-      } else {
-        setIsLoading(false);
-      }
-    };
-
-    fetchChallenges();
+    return () => unsubscribeChallenges();
   }, [currentChallengeId]);
 
   useEffect(() => {
-    if (!currentChallengeId) return;
+    if (!auth.currentUser || !currentChallengeId) return;
 
     const messagesQuery = query(
       collection(db, 'messages'),
@@ -88,7 +75,7 @@ const Layout = () => {
         id: doc.id,
         ...doc.data()
       })) as MessageType[];
-      setMessages(newMessages.filter(message => !message.hidden));
+      setMessages(newMessages);
     });
 
     return () => unsubscribe();
@@ -99,24 +86,12 @@ const Layout = () => {
   };
 
   const addMessage = async (message: Omit<MessageType, 'id' | 'timestamp'>) => {
-    const publicUserId = localStorage.getItem('publicUserId');
-    const userId = auth.currentUser?.uid || publicUserId;
-    
-    if (!userId) {
-      const newPublicUserId = crypto.randomUUID();
-      localStorage.setItem('publicUserId', newPublicUserId);
-      
-      // Create public user record
-      await setDoc(doc(db, 'users', newPublicUserId), {
-        role: 'public',
-        createdAt: new Date().toISOString()
-      });
-    }
+    if (!auth.currentUser || !currentChallengeId) return;
 
     const newMessage = {
       ...message,
       timestamp: new Date().toISOString(),
-      userId: userId,
+      userId: auth.currentUser.uid,
       challengeId: currentChallengeId
     };
 

@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
+const STARTUP_LIST_TOKEN_COST = 30;
+
 const NewChallenge = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -14,6 +15,33 @@ const NewChallenge = () => {
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const checkAndUpdateTokens = async (cost: number): Promise<boolean> => {
+    if (!auth.currentUser) return false;
+
+    try {
+      const tokenDoc = await getDoc(doc(db, 'tokenUsage', auth.currentUser.uid));
+      if (!tokenDoc.exists()) return false;
+
+      const tokenUsage = tokenDoc.data();
+      const remainingTokens = tokenUsage.totalTokens - tokenUsage.usedTokens;
+
+      if (remainingTokens < cost) {
+        setError(`Você não tem tokens suficientes. Seu plano ${tokenUsage.plan} possui ${remainingTokens} tokens restantes.`);
+        return false;
+      }
+
+      await updateDoc(doc(db, 'tokenUsage', auth.currentUser.uid), {
+        usedTokens: tokenUsage.usedTokens + cost
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error checking tokens:', error);
+      return false;
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -25,30 +53,35 @@ const NewChallenge = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth.currentUser) {
+      setError('Usuário não autenticado');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const publicUserId = localStorage.getItem('publicUserId');
-      const userId = auth.currentUser?.uid || publicUserId;
-      const userEmail = auth.currentUser?.email || 'anonymous@user.com';
-      const sessionId = uuidv4().replace(/-/g, '');
-
-      let userData = {
-        name: 'Anônimo',
-        company: 'Não informada'
-      };
-
-      if (auth.currentUser) {
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        if (userDoc.exists()) {
-          userData = userDoc.data();
-        }
+      const hasTokens = await checkAndUpdateTokens(STARTUP_LIST_TOKEN_COST);
+      if (!hasTokens) {
+        setIsSubmitting(false);
+        return;
       }
 
-      // Create challenge
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (!userData) {
+        setError('Dados do usuário não encontrados');
+        return;
+      }
+
+      const firstName = userData.name?.split(' ')[0] || '';
+      const sessionId = uuidv4().replace(/-/g, '');
+
+      // Create challenge first
       const challengeRef = await addDoc(collection(db, 'challenges'), {
-        userId,
-        userEmail,
+        userId: auth.currentUser.uid,
+        userEmail: auth.currentUser.email,
         company: userData.company,
         businessArea: formData.businessArea,
         title: formData.title,
@@ -57,8 +90,14 @@ const NewChallenge = () => {
         createdAt: new Date().toISOString()
       });
 
-      // Prepare webhook message
-      const message = `Eu sou ${userData.name.split(' ')[0]}, um profissional gestor antenado nas novidades e que curte uma fala informal e ao mesmo tempo séria nos assuntos relativos ao Desafio. Eu trabalho na empresa ${userData.company} que atua na área de ${formData.businessArea}. O meu desafio é ${formData.title} e a descrição do desafio é ${formData.description}. Faça uma breve saudação bem humorada e criativa que remete à cultura Geek e que tenha ligação direta com o desafio proposto.`;
+      // Prepare webhook message with all required fields
+      const message = `Eu sou ${firstName}, um profissional gestor antenado nas novidades e que curte uma fala informal e ao mesmo tempo séria nos assuntos relativos ao Desafio. Eu trabalho na empresa ${userData.company || ''} que atua na área de ${formData.businessArea}. O meu desafio é ${formData.title} e a descrição do desafio é ${formData.description}. Faça uma breve saudação bem humorada e criativa que remete à cultura Geek e que tenha ligação direta com o desafio proposto. Depois, faça de forma direta uma pergu nta sobre o ambiente interno de negócios do cliente, ou seja, sobre sua própira infraestrutura tecnológica, sobre sua operação, sobre os valores envolvidos na perda, ou sobre as possibilidades concretas de implantar a inovação nso processos, sistemas, rotinas ou maquinário - pesquise na internet e seja inteligente ao formular uma linha de questionamento bem embasada, conhecendo muito bem a área de atuação e qual empresa o cliente está representando. Uma pergunta inusitada e útil o suficiente para reforçar a descrição do desafio, com enfoque no ambiente interno da ${userData.company || ''} e seu estágio no quesito de transformação digital.`;
+
+      console.log('Sending webhook message:', {
+        sessionId,
+        message,
+        challengeId: challengeRef.id
+      });
 
       // Send webhook message
       const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
@@ -73,13 +112,14 @@ const NewChallenge = () => {
       });
 
       if (!response.ok) {
+        console.error('Webhook response error:', await response.text());
         throw new Error('Failed to send initial message');
       }
 
       // Save user message
       await addDoc(collection(db, 'messages'), {
         challengeId: challengeRef.id,
-        userId,
+        userId: auth.currentUser.uid,
         role: 'user',
         content: message,
         timestamp: new Date().toISOString(),
@@ -91,13 +131,14 @@ const NewChallenge = () => {
       if (data[0]?.output) {
         await addDoc(collection(db, 'messages'), {
           challengeId: challengeRef.id,
-          userId,
+          userId: auth.currentUser.uid,
           role: 'assistant',
           content: data[0].output,
           timestamp: new Date().toISOString()
         });
       }
 
+      // Navigate to home page
       navigate('/');
     } catch (error) {
       console.error('Error creating challenge:', error);
