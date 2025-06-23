@@ -152,6 +152,9 @@ export interface Translations {
   renewalOn: string;
   upgradePlan: string;
   
+  // Language Change Message
+  languageChangeMessage: string;
+  
   // Common
   back: string;
   next: string;
@@ -347,6 +350,9 @@ export const translations: Record<string, Translations> = {
     renewalOn: 'Renovação em',
     upgradePlan: 'Atualizar plano',
     
+    // Language Change Message
+    languageChangeMessage: 'Poderia por favor mudar o idioma que fala comigo, e iniciar o questionário?',
+    
     // Common
     back: 'Voltar',
     next: 'Próximo',
@@ -540,6 +546,9 @@ export const translations: Record<string, Translations> = {
     remaining: 'remaining',
     renewalOn: 'Renewal on',
     upgradePlan: 'Upgrade plan',
+    
+    // Language Change Message
+    languageChangeMessage: 'Could you please change the language you speak to me, to english and begin the questionare?',
     
     // Common
     back: 'Back',
@@ -735,6 +744,9 @@ export const translations: Record<string, Translations> = {
     renewalOn: 'Renouvellement le',
     upgradePlan: 'Mettre à niveau le plan',
     
+    // Language Change Message
+    languageChangeMessage: 'Pourriez-vous changer la langue en allemand et commencer le questionnaire ?',
+    
     // Common
     back: 'Retour',
     next: 'Suivant',
@@ -928,6 +940,9 @@ export const translations: Record<string, Translations> = {
     remaining: 'verbleibend',
     renewalOn: 'Erneuerung am',
     upgradePlan: 'Plan upgraden',
+    
+    // Language Change Message
+    languageChangeMessage: 'Könnten Sie bitte die Sprache auf Deutsch umstellen und mit dem Fragebogen beginnen?',
     
     // Common
     back: 'Zurück',
@@ -1123,6 +1138,9 @@ export const translations: Record<string, Translations> = {
     renewalOn: 'Rinnovo il',
     upgradePlan: 'Aggiorna piano',
     
+    // Language Change Message
+    languageChangeMessage: 'Potresti cambiare la lingua in tedesco e iniziare il questionario?',
+    
     // Common
     back: 'Indietro',
     next: 'Avanti',
@@ -1231,11 +1249,73 @@ export const initializeLanguage = async (): Promise<string> => {
   return browserLanguage;
 };
 
-// Set language
-export const setLanguage = (language: string): void => {
-  if (translations[language]) {
-    localStorage.setItem('genoi-language', language);
-    window.location.reload(); // Reload to apply new language
+// Set language and send webhook message
+export const setLanguage = async (language: string): Promise<void> => {
+  if (!translations[language]) return;
+  
+  const previousLanguage = getCurrentLanguage();
+  localStorage.setItem('genoi-language', language);
+  
+  // Only send webhook if language actually changed and user is authenticated
+  if (previousLanguage !== language) {
+    await sendLanguageChangeMessage(language);
+  }
+  
+  window.location.reload(); // Reload to apply new language
+};
+
+// Send language change message to webhook
+const sendLanguageChangeMessage = async (newLanguage: string): Promise<void> => {
+  try {
+    // Import auth and other dependencies dynamically to avoid circular imports
+    const { auth } = await import('../firebase');
+    const { addDoc, collection } = await import('firebase/firestore');
+    const { db } = await import('../firebase');
+    
+    if (!auth.currentUser) return;
+    
+    // Get current challenge from localStorage or other source
+    const currentChallengeId = localStorage.getItem('current-challenge-id');
+    if (!currentChallengeId) return;
+    
+    const message = translations[newLanguage].languageChangeMessage;
+    
+    // Send to webhook
+    const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        sessionId: currentChallengeId,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Save hidden user message
+      await addDoc(collection(db, 'messages'), {
+        challengeId: currentChallengeId,
+        userId: auth.currentUser.uid,
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+        hidden: true
+      });
+
+      // Save AI response
+      if (data[0]?.output) {
+        await addDoc(collection(db, 'messages'), {
+          challengeId: currentChallengeId,
+          userId: auth.currentUser.uid,
+          role: 'assistant',
+          content: data[0].output,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error sending language change message:', error);
   }
 };
 

@@ -49,7 +49,10 @@ const Layout = () => {
           timestamp: new Date().toISOString()
         }]);
       } else if (!currentChallengeId) {
-        setCurrentChallengeId(newChallenges[0].id);
+        const firstChallenge = newChallenges[0];
+        setCurrentChallengeId(firstChallenge.id);
+        // Store current challenge ID for language change functionality
+        localStorage.setItem('current-challenge-id', firstChallenge.id);
       }
       
       setIsLoading(false);
@@ -104,6 +107,8 @@ const Layout = () => {
 
   const selectChallenge = (challengeId: string) => {
     setCurrentChallengeId(challengeId);
+    // Store current challenge ID for language change functionality
+    localStorage.setItem('current-challenge-id', challengeId);
     setIsSidebarOpen(false);
   };
 
