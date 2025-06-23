@@ -20,8 +20,10 @@ import { ArrowLeft } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import { UserType, TokenUsageType } from '../../types';
 import TokenUsageChart from '../TokenUsageChart';
+import { useTranslation } from '../../utils/i18n';
 
 const UserManagement = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserType | null>(null);
   const [tokenUsage, setTokenUsage] = useState<TokenUsageType | null>(null);
@@ -50,7 +52,7 @@ const UserManagement = () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
         if (!userDoc.exists()) {
-          setError('Usuário não encontrado');
+          setError(t.userNotFound || 'Usuário não encontrado');
           return;
         }
         
@@ -70,12 +72,12 @@ const UserManagement = () => {
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Erro ao carregar dados');
+        setError(t.errorLoadingData || 'Erro ao carregar dados');
       }
     };
 
     fetchData();
-  }, [navigate]);
+  }, [navigate, t]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,7 +90,7 @@ const UserManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) {
-      setError('Usuário não autenticado');
+      setError(t.userNotAuthenticated || 'Usuário não autenticado');
       return;
     }
 
@@ -107,11 +109,11 @@ const UserManagement = () => {
         transactionId: crypto.randomUUID()
       });
 
-      setMessage('Perfil atualizado com sucesso!');
+      setMessage(t.profileUpdatedSuccess || 'Perfil atualizado com sucesso!');
       setError('');
     } catch (err) {
       console.error('Error updating profile:', err);
-      setError('Erro ao atualizar perfil');
+      setError(t.errorUpdatingProfile || 'Erro ao atualizar perfil');
       setMessage('');
     }
   };
@@ -119,7 +121,7 @@ const UserManagement = () => {
   const handlePasswordReset = async () => {
     try {
       if (!auth.currentUser?.email) {
-        setError('Email não encontrado');
+        setError(t.emailNotFound || 'Email não encontrado');
         return;
       }
 
@@ -133,18 +135,18 @@ const UserManagement = () => {
         transactionId: crypto.randomUUID()
       });
 
-      setMessage('Email de redefinição de senha enviado!');
+      setMessage(t.passwordResetEmailSent || 'Email de redefinição de senha enviado!');
       setError('');
     } catch (err) {
       console.error('Error sending password reset:', err);
-      setError('Erro ao enviar email de redefinição');
+      setError(t.errorSendingPasswordReset || 'Erro ao enviar email de redefinição');
       setMessage('');
     }
   };
 
   const handleReauthenticate = async () => {
     if (!auth.currentUser?.email) {
-      setError('Email não encontrado');
+      setError(t.emailNotFound || 'Email não encontrado');
       return;
     }
 
@@ -158,13 +160,13 @@ const UserManagement = () => {
       await proceedWithAccountDeletion();
     } catch (err) {
       console.error('Error reauthenticating:', err);
-      setError('Senha incorreta. Por favor, tente novamente.');
+      setError(t.incorrectPassword || 'Senha incorreta. Por favor, tente novamente.');
     }
   };
 
   const proceedWithAccountDeletion = async () => {
     if (!auth.currentUser) {
-      setError('Usuário não autenticado');
+      setError(t.userNotAuthenticated || 'Usuário não autenticado');
       return;
     }
 
@@ -206,9 +208,9 @@ const UserManagement = () => {
           setShowReauthDialog(true);
           return;
         }
-        setError(`Erro ao deletar a conta: ${err.message}`);
+        setError(`${t.errorDeletingAccount || 'Erro ao deletar a conta'}: ${err.message}`);
       } else {
-        setError('Erro ao deletar conta. Por favor, tente novamente.');
+        setError(t.errorDeletingAccountGeneric || 'Erro ao deletar conta. Por favor, tente novamente.');
       }
     } finally {
       setIsDeleting(false);
@@ -216,13 +218,14 @@ const UserManagement = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'DELETAR') {
-      setError('Digite DELETAR para confirmar');
+    const deleteKeyword = t.deleteKeyword || 'DELETAR';
+    if (deleteConfirmText !== deleteKeyword) {
+      setError(`${t.typeToConfirm || 'Digite'} ${deleteKeyword} ${t.toConfirm || 'para confirmar'}`);
       return;
     }
 
     if (!auth.currentUser) {
-      setError('Usuário não autenticado');
+      setError(t.userNotAuthenticated || 'Usuário não autenticado');
       return;
     }
 
@@ -235,7 +238,7 @@ const UserManagement = () => {
   if (!userData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
+        <div className="text-white">{t.loading}</div>
       </div>
     );
   }
@@ -249,7 +252,7 @@ const UserManagement = () => {
         >
           <ArrowLeft size={24} />
         </button>
-        <h1 className="text-2xl font-bold text-white">Perfil</h1>
+        <h1 className="text-2xl font-bold text-white">{t.profile}</h1>
         <Link
           to="/plans"
           className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
@@ -278,7 +281,7 @@ const UserManagement = () => {
             value={formData.name}
             disabled
             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white opacity-50"
-            placeholder="Nome completo"
+            placeholder={t.name}
           />
           <input
             type="text"
@@ -286,7 +289,7 @@ const UserManagement = () => {
             value={formData.cpf}
             disabled
             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white opacity-50"
-            placeholder="CPF"
+            placeholder={t.cpf}
           />
           <input
             type="text"
@@ -294,7 +297,7 @@ const UserManagement = () => {
             value={formData.company}
             disabled
             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white opacity-50"
-            placeholder="Empresa"
+            placeholder={t.company}
           />
           <input
             type="email"
@@ -302,14 +305,14 @@ const UserManagement = () => {
             value={formData.email}
             disabled
             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white opacity-50"
-            placeholder="Email"
+            placeholder={t.email}
           />
           <input
             type="tel"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="Celular"
+            placeholder={t.phone}
             className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white"
           />
         </div>
@@ -319,31 +322,31 @@ const UserManagement = () => {
             type="submit"
             className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 rounded-lg text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all"
           >
-            Atualizar Perfil
+            {t.updateProfile}
           </button>
           <button
             type="button"
             onClick={handlePasswordReset}
             className="flex-1 py-3 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black rounded-lg text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all"
           >
-            Redefinir Senha
+            {t.resetPassword}
           </button>
         </div>
       </form>
 
       <div className="border-t border-red-800 pt-8">
-        <h2 className="text-xl font-bold text-red-500 mb-4">Zona de Perigo</h2>
+        <h2 className="text-xl font-bold text-red-500 mb-4">{t.dangerZone}</h2>
         {showReauthDialog ? (
           <div className="space-y-4">
             <p className="text-red-400">
-              Por favor, insira sua senha para confirmar a deleção da conta:
+              {t.enterPasswordToConfirm || 'Por favor, insira sua senha para confirmar a deleção da conta:'}
             </p>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 bg-gray-800 border border-red-700 rounded-md text-white"
-              placeholder="Senha"
+              placeholder={t.password}
             />
             <div className="flex gap-4">
               <button
@@ -353,7 +356,7 @@ const UserManagement = () => {
                   isDeleting ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                Confirmar
+                {t.confirm}
               </button>
               <button
                 onClick={() => {
@@ -363,7 +366,7 @@ const UserManagement = () => {
                 }}
                 className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white"
               >
-                Cancelar
+                {t.cancel}
               </button>
             </div>
           </div>
@@ -372,19 +375,19 @@ const UserManagement = () => {
             onClick={() => setShowDeleteConfirm(true)}
             className="w-full py-2 bg-red-600 hover:bg-red-700 rounded-md text-white"
           >
-            Apagar conta
+            {t.deleteAccount}
           </button>
         ) : (
           <div className="space-y-4">
             <p className="text-red-400">
-              Para confirmar a deleção da conta e anonimização dos dados, digite DELETAR no campo abaixo:
+              {t.confirmAccountDeletion || 'Para confirmar a deleção da conta e anonimização dos dados, digite'} {t.deleteKeyword || 'DELETAR'} {t.inFieldBelow || 'no campo abaixo'}:
             </p>
             <input
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
               className="w-full px-4 py-2 bg-gray-800 border border-red-700 rounded-md text-white"
-              placeholder="Digite DELETAR"
+              placeholder={`${t.type || 'Digite'} ${t.deleteKeyword || 'DELETAR'}`}
             />
             <div className="flex gap-4">
               <button
@@ -394,7 +397,7 @@ const UserManagement = () => {
                   isDeleting ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                {isDeleting ? 'Deletando...' : 'Confirmar Deleção'}
+                {isDeleting ? (t.deleting || 'Deletando...') : t.confirmDeletion}
               </button>
               <button
                 onClick={() => {
@@ -404,7 +407,7 @@ const UserManagement = () => {
                 disabled={isDeleting}
                 className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white"
               >
-                Cancelar
+                {t.cancel}
               </button>
             </div>
           </div>

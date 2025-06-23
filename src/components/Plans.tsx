@@ -3,49 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Baby, Swords, SwordIcon, Sparkles, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
-
-const plans = [
-  {
-    id: 'padawan',
-    name: 'Padawan',
-    icon: Baby,
-    description: 'Plano para iniciantes que estão começando no caminho da inovação',
-    tokens: 100,
-    price: 0,
-    highlight: false,
-    stripeLink: ''
-  },
-  {
-    id: 'jedi',
-    name: 'Jedi',
-    icon: SwordIcon,
-    description: 'Plano para o guerreiro que está aprendendo as artes da inovação por IA',
-    tokens: 1000,
-    price: 600,
-    highlight: true,
-    stripeLink: 'https://buy.stripe.com/9B6cN5dT9gDme7tdzdfYY0o'
-  },
-  {
-    id: 'mestre-jedi',
-    name: 'Mestre Jedi',
-    icon: Swords,
-    description: 'Plano para o Jedi que se superou, e agora pode derrotar as forças da inércia inovativa',
-    tokens: 3000,
-    price: 1800,
-    highlight: false,
-    stripeLink: 'https://buy.stripe.com/eVqeVd4iz0Eo0gDan1fYY0p'
-  },
-  {
-    id: 'mestre-yoda',
-    name: 'Mestre Yoda',
-    icon: Sparkles,
-    description: 'Plano para o inovador que enfrentou batalhas e está preparado para defender as forças da disrupção',
-    tokens: 11000,
-    price: 6000,
-    highlight: false,
-    stripeLink: 'https://buy.stripe.com/9B68wP5mD5YI5AXcv9fYY0q'
-  }
-];
+import { useTranslation } from '../utils/i18n';
 
 const SecurityBadge = ({ icon: Icon, text }: { icon: any; text: string }) => (
   <div className="flex items-center gap-2 text-gray-300">
@@ -55,9 +13,53 @@ const SecurityBadge = ({ icon: Icon, text }: { icon: any; text: string }) => (
 );
 
 const Plans = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  const plans = [
+    {
+      id: 'padawan',
+      name: 'Padawan',
+      icon: Baby,
+      description: t.padawanDescription || 'Plano para iniciantes que estão começando no caminho da inovação',
+      tokens: 100,
+      price: 0,
+      highlight: false,
+      stripeLink: ''
+    },
+    {
+      id: 'jedi',
+      name: 'Jedi',
+      icon: SwordIcon,
+      description: t.jediDescription || 'Plano para o guerreiro que está aprendendo as artes da inovação por IA',
+      tokens: 1000,
+      price: 600,
+      highlight: true,
+      stripeLink: 'https://buy.stripe.com/9B6cN5dT9gDme7tdzdfYY0o'
+    },
+    {
+      id: 'mestre-jedi',
+      name: t.masterJedi || 'Mestre Jedi',
+      icon: Swords,
+      description: t.masterJediDescription || 'Plano para o Jedi que se superou, e agora pode derrotar as forças da inércia inovativa',
+      tokens: 3000,
+      price: 1800,
+      highlight: false,
+      stripeLink: 'https://buy.stripe.com/eVqeVd4iz0Eo0gDan1fYY0p'
+    },
+    {
+      id: 'mestre-yoda',
+      name: t.masterYoda || 'Mestre Yoda',
+      icon: Sparkles,
+      description: t.masterYodaDescription || 'Plano para o inovador que enfrentou batalhas e está preparado para defender as forças da disrupção',
+      tokens: 11000,
+      price: 6000,
+      highlight: false,
+      stripeLink: 'https://buy.stripe.com/9B68wP5mD5YI5AXcv9fYY0q'
+    }
+  ];
 
   useEffect(() => {
     const fetchUserPlan = async () => {
@@ -83,7 +85,7 @@ const Plans = () => {
     }
 
     if (plan.id === 'padawan') {
-      setError('O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.');
+      setError(t.padawanPlanError || 'O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.');
       return;
     }
 
@@ -101,13 +103,21 @@ const Plans = () => {
       window.location.href = plan.stripeLink;
     } catch (error) {
       console.error('Error recording plan click:', error);
-      setError('Erro ao processar sua solicitação. Por favor, tente novamente.');
+      setError(t.errorProcessingRequest || 'Erro ao processar sua solicitação. Por favor, tente novamente.');
     }
   };
 
   const isPlanDisabled = (planName: string) => {
     if (!currentPlan) return false;
     return currentPlan.toLowerCase().replace(' ', '-') === planName;
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat(t.language === 'pt' ? 'pt-BR' : 'en-US', {
+      style: 'currency',
+      currency: t.language === 'pt' ? 'BRL' : 'USD',
+      minimumFractionDigits: 0
+    }).format(price);
   };
 
   return (
@@ -121,8 +131,8 @@ const Plans = () => {
             <ArrowLeft size={24} />
           </button>
           <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-white mb-4">Escolha seu plano</h1>
-            <p className="text-gray-400 text-lg">Desbloqueie o poder da inovação com nossos planos personalizados</p>
+            <h1 className="text-4xl font-bold text-white mb-4">{t.choosePlan}</h1>
+            <p className="text-gray-400 text-lg">{t.unlockInnovationPower || 'Desbloqueie o poder da inovação com nossos planos personalizados'}</p>
           </div>
           <div className="w-8" />
         </div>
@@ -148,7 +158,7 @@ const Plans = () => {
               >
                 {plan.highlight && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm">
-                    Mais popular
+                    {t.mostPopular}
                   </div>
                 )}
                 
@@ -163,9 +173,9 @@ const Plans = () => {
                 
                 <div className="text-center mb-6">
                   <div className="text-3xl font-bold text-white mb-2">
-                    {plan.price === 0 ? 'Grátis' : `R$ ${plan.price}`}
+                    {plan.price === 0 ? t.free : formatPrice(plan.price)}
                   </div>
-                  <div className="text-blue-400">{plan.tokens} tokens</div>
+                  <div className="text-blue-400">{plan.tokens} {t.tokens}</div>
                 </div>
 
                 <button
@@ -177,7 +187,12 @@ const Plans = () => {
                       : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
-                  {isPadawan ? 'Plano inicial' : isDisabled ? 'Plano atual' : 'Começar agora'}
+                  {isPadawan 
+                    ? (t.initialPlan) 
+                    : isDisabled 
+                      ? (t.currentPlan) 
+                      : (t.startNow)
+                  }
                 </button>
               </div>
             );
@@ -186,13 +201,13 @@ const Plans = () => {
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-gray-800 p-6 rounded-xl">
-            <SecurityBadge icon={Shield} text="Pagamento Seguro SSL" />
+            <SecurityBadge icon={Shield} text={t.securePayment} />
           </div>
           <div className="bg-gray-800 p-6 rounded-xl">
-            <SecurityBadge icon={Lock} text="Certificado PCI DSS" />
+            <SecurityBadge icon={Lock} text={t.pciCertified || 'Certificado PCI DSS'} />
           </div>
           <div className="bg-gray-800 p-6 rounded-xl">
-            <SecurityBadge icon={Shield} text="Proteção Antifraude" />
+            <SecurityBadge icon={Shield} text={t.fraudProtection || 'Proteção Antifraude'} />
           </div>
         </div>
       </div>

@@ -56,7 +56,6 @@ export interface Translations {
   
   // Pipeline CRM
   mapped: string;
-  selected: string;
   contacted: string;
   interviewed: string;
   poc: string;
@@ -109,6 +108,17 @@ export interface Translations {
   free: string;
   mostPopular: string;
   securePayment: string;
+  padawanDescription: string;
+  jediDescription: string;
+  masterJedi: string;
+  masterJediDescription: string;
+  masterYoda: string;
+  masterYodaDescription: string;
+  unlockInnovationPower: string;
+  padawanPlanError: string;
+  errorProcessingRequest: string;
+  pciCertified: string;
+  fraudProtection: string;
   
   // Profile
   updateProfile: string;
@@ -117,6 +127,30 @@ export interface Translations {
   dangerZone: string;
   confirmDeletion: string;
   typeDelete: string;
+  userNotFound: string;
+  errorLoadingData: string;
+  userNotAuthenticated: string;
+  profileUpdatedSuccess: string;
+  errorUpdatingProfile: string;
+  emailNotFound: string;
+  passwordResetEmailSent: string;
+  errorSendingPasswordReset: string;
+  incorrectPassword: string;
+  errorDeletingAccount: string;
+  errorDeletingAccountGeneric: string;
+  enterPasswordToConfirm: string;
+  confirmAccountDeletion: string;
+  deleteKeyword: string;
+  inFieldBelow: string;
+  type: string;
+  toConfirm: string;
+  deleting: string;
+  
+  // Token Usage
+  tokenUsage: string;
+  remaining: string;
+  renewalOn: string;
+  upgradePlan: string;
   
   // Common
   back: string;
@@ -269,6 +303,17 @@ export const translations: Record<string, Translations> = {
     free: 'Grátis',
     mostPopular: 'Mais popular',
     securePayment: 'Pagamento Seguro SSL',
+    padawanDescription: 'Plano para iniciantes que estão começando no caminho da inovação',
+    jediDescription: 'Plano para o guerreiro que está aprendendo as artes da inovação por IA',
+    masterJedi: 'Mestre Jedi',
+    masterJediDescription: 'Plano para o Jedi que se superou, e agora pode derrotar as forças da inércia inovativa',
+    masterYoda: 'Mestre Yoda',
+    masterYodaDescription: 'Plano para o inovador que enfrentou batalhas e está preparado para defender as forças da disrupção',
+    unlockInnovationPower: 'Desbloqueie o poder da inovação com nossos planos personalizados',
+    padawanPlanError: 'O plano Padawan é o plano inicial e não pode ser contratado. Por favor, escolha outro plano.',
+    errorProcessingRequest: 'Erro ao processar sua solicitação. Por favor, tente novamente.',
+    pciCertified: 'Certificado PCI DSS',
+    fraudProtection: 'Proteção Antifraude',
     
     // Profile
     updateProfile: 'Atualizar Perfil',
@@ -277,6 +322,30 @@ export const translations: Record<string, Translations> = {
     dangerZone: 'Zona de Perigo',
     confirmDeletion: 'Confirmar Deleção',
     typeDelete: 'Digite DELETAR',
+    userNotFound: 'Usuário não encontrado',
+    errorLoadingData: 'Erro ao carregar dados',
+    userNotAuthenticated: 'Usuário não autenticado',
+    profileUpdatedSuccess: 'Perfil atualizado com sucesso!',
+    errorUpdatingProfile: 'Erro ao atualizar perfil',
+    emailNotFound: 'Email não encontrado',
+    passwordResetEmailSent: 'Email de redefinição de senha enviado!',
+    errorSendingPasswordReset: 'Erro ao enviar email de redefinição',
+    incorrectPassword: 'Senha incorreta. Por favor, tente novamente.',
+    errorDeletingAccount: 'Erro ao deletar a conta',
+    errorDeletingAccountGeneric: 'Erro ao deletar conta. Por favor, tente novamente.',
+    enterPasswordToConfirm: 'Por favor, insira sua senha para confirmar a deleção da conta:',
+    confirmAccountDeletion: 'Para confirmar a deleção da conta e anonimização dos dados, digite',
+    deleteKeyword: 'DELETAR',
+    inFieldBelow: 'no campo abaixo',
+    type: 'Digite',
+    toConfirm: 'para confirmar',
+    deleting: 'Deletando...',
+    
+    // Token Usage
+    tokenUsage: 'Uso de Tokens',
+    remaining: 'restantes',
+    renewalOn: 'Renovação em',
+    upgradePlan: 'Atualizar plano',
     
     // Common
     back: 'Voltar',
@@ -428,6 +497,17 @@ export const translations: Record<string, Translations> = {
     free: 'Free',
     mostPopular: 'Most popular',
     securePayment: 'Secure SSL Payment',
+    padawanDescription: 'Plan for beginners starting their innovation journey',
+    jediDescription: 'Plan for warriors learning the arts of AI innovation',
+    masterJedi: 'Master Jedi',
+    masterJediDescription: 'Plan for Jedis who have overcome and can now defeat the forces of innovative inertia',
+    masterYoda: 'Master Yoda',
+    masterYodaDescription: 'Plan for innovators who have faced battles and are ready to defend the forces of disruption',
+    unlockInnovationPower: 'Unlock the power of innovation with our personalized plans',
+    padawanPlanError: 'The Padawan plan is the initial plan and cannot be purchased. Please choose another plan.',
+    errorProcessingRequest: 'Error processing your request. Please try again.',
+    pciCertified: 'PCI DSS Certified',
+    fraudProtection: 'Fraud Protection',
     
     // Profile
     updateProfile: 'Update Profile',
@@ -436,6 +516,30 @@ export const translations: Record<string, Translations> = {
     dangerZone: 'Danger Zone',
     confirmDeletion: 'Confirm Deletion',
     typeDelete: 'Type DELETE',
+    userNotFound: 'User not found',
+    errorLoadingData: 'Error loading data',
+    userNotAuthenticated: 'User not authenticated',
+    profileUpdatedSuccess: 'Profile updated successfully!',
+    errorUpdatingProfile: 'Error updating profile',
+    emailNotFound: 'Email not found',
+    passwordResetEmailSent: 'Password reset email sent!',
+    errorSendingPasswordReset: 'Error sending password reset email',
+    incorrectPassword: 'Incorrect password. Please try again.',
+    errorDeletingAccount: 'Error deleting account',
+    errorDeletingAccountGeneric: 'Error deleting account. Please try again.',
+    enterPasswordToConfirm: 'Please enter your password to confirm account deletion:',
+    confirmAccountDeletion: 'To confirm account deletion and data anonymization, type',
+    deleteKeyword: 'DELETE',
+    inFieldBelow: 'in the field below',
+    type: 'Type',
+    toConfirm: 'to confirm',
+    deleting: 'Deleting...',
+    
+    // Token Usage
+    tokenUsage: 'Token Usage',
+    remaining: 'remaining',
+    renewalOn: 'Renewal on',
+    upgradePlan: 'Upgrade plan',
     
     // Common
     back: 'Back',
@@ -587,6 +691,17 @@ export const translations: Record<string, Translations> = {
     free: 'Gratuit',
     mostPopular: 'Le plus populaire',
     securePayment: 'Paiement sécurisé SSL',
+    padawanDescription: 'Plan pour les débutants qui commencent leur parcours d\'innovation',
+    jediDescription: 'Plan pour les guerriers qui apprennent les arts de l\'innovation IA',
+    masterJedi: 'Maître Jedi',
+    masterJediDescription: 'Plan pour les Jedis qui ont surmonté et peuvent maintenant vaincre les forces d\'inertie innovante',
+    masterYoda: 'Maître Yoda',
+    masterYodaDescription: 'Plan pour les innovateurs qui ont affronté des batailles et sont prêts à défendre les forces de disruption',
+    unlockInnovationPower: 'Débloquez le pouvoir de l\'innovation avec nos plans personnalisés',
+    padawanPlanError: 'Le plan Padawan est le plan initial et ne peut pas être acheté. Veuillez choisir un autre plan.',
+    errorProcessingRequest: 'Erreur lors du traitement de votre demande. Veuillez réessayer.',
+    pciCertified: 'Certifié PCI DSS',
+    fraudProtection: 'Protection contre la fraude',
     
     // Profile
     updateProfile: 'Mettre à jour le profil',
@@ -595,6 +710,30 @@ export const translations: Record<string, Translations> = {
     dangerZone: 'Zone de danger',
     confirmDeletion: 'Confirmer la suppression',
     typeDelete: 'Tapez SUPPRIMER',
+    userNotFound: 'Utilisateur non trouvé',
+    errorLoadingData: 'Erreur lors du chargement des données',
+    userNotAuthenticated: 'Utilisateur non authentifié',
+    profileUpdatedSuccess: 'Profil mis à jour avec succès!',
+    errorUpdatingProfile: 'Erreur lors de la mise à jour du profil',
+    emailNotFound: 'Email non trouvé',
+    passwordResetEmailSent: 'Email de réinitialisation du mot de passe envoyé!',
+    errorSendingPasswordReset: 'Erreur lors de l\'envoi de l\'email de réinitialisation',
+    incorrectPassword: 'Mot de passe incorrect. Veuillez réessayer.',
+    errorDeletingAccount: 'Erreur lors de la suppression du compte',
+    errorDeletingAccountGeneric: 'Erreur lors de la suppression du compte. Veuillez réessayer.',
+    enterPasswordToConfirm: 'Veuillez entrer votre mot de passe pour confirmer la suppression du compte:',
+    confirmAccountDeletion: 'Pour confirmer la suppression du compte et l\'anonymisation des données, tapez',
+    deleteKeyword: 'SUPPRIMER',
+    inFieldBelow: 'dans le champ ci-dessous',
+    type: 'Tapez',
+    toConfirm: 'pour confirmer',
+    deleting: 'Suppression...',
+    
+    // Token Usage
+    tokenUsage: 'Utilisation des jetons',
+    remaining: 'restants',
+    renewalOn: 'Renouvellement le',
+    upgradePlan: 'Mettre à niveau le plan',
     
     // Common
     back: 'Retour',
@@ -746,6 +885,17 @@ export const translations: Record<string, Translations> = {
     free: 'Kostenlos',
     mostPopular: 'Am beliebtesten',
     securePayment: 'Sichere SSL-Zahlung',
+    padawanDescription: 'Plan für Anfänger, die ihre Innovationsreise beginnen',
+    jediDescription: 'Plan für Krieger, die die Künste der KI-Innovation erlernen',
+    masterJedi: 'Meister Jedi',
+    masterJediDescription: 'Plan für Jedis, die überwunden haben und nun die Kräfte der innovativen Trägheit besiegen können',
+    masterYoda: 'Meister Yoda',
+    masterYodaDescription: 'Plan für Innovatoren, die Schlachten erlebt haben und bereit sind, die Kräfte der Disruption zu verteidigen',
+    unlockInnovationPower: 'Entfesseln Sie die Kraft der Innovation mit unseren personalisierten Plänen',
+    padawanPlanError: 'Der Padawan-Plan ist der Anfangsplan und kann nicht gekauft werden. Bitte wählen Sie einen anderen Plan.',
+    errorProcessingRequest: 'Fehler bei der Bearbeitung Ihrer Anfrage. Bitte versuchen Sie es erneut.',
+    pciCertified: 'PCI DSS zertifiziert',
+    fraudProtection: 'Betrugsschutz',
     
     // Profile
     updateProfile: 'Profil aktualisieren',
@@ -754,6 +904,30 @@ export const translations: Record<string, Translations> = {
     dangerZone: 'Gefahrenzone',
     confirmDeletion: 'Löschung bestätigen',
     typeDelete: 'LÖSCHEN eingeben',
+    userNotFound: 'Benutzer nicht gefunden',
+    errorLoadingData: 'Fehler beim Laden der Daten',
+    userNotAuthenticated: 'Benutzer nicht authentifiziert',
+    profileUpdatedSuccess: 'Profil erfolgreich aktualisiert!',
+    errorUpdatingProfile: 'Fehler beim Aktualisieren des Profils',
+    emailNotFound: 'E-Mail nicht gefunden',
+    passwordResetEmailSent: 'Passwort-Reset-E-Mail gesendet!',
+    errorSendingPasswordReset: 'Fehler beim Senden der Passwort-Reset-E-Mail',
+    incorrectPassword: 'Falsches Passwort. Bitte versuchen Sie es erneut.',
+    errorDeletingAccount: 'Fehler beim Löschen des Kontos',
+    errorDeletingAccountGeneric: 'Fehler beim Löschen des Kontos. Bitte versuchen Sie es erneut.',
+    enterPasswordToConfirm: 'Bitte geben Sie Ihr Passwort ein, um die Kontolöschung zu bestätigen:',
+    confirmAccountDeletion: 'Um die Kontolöschung und Datenanonymisierung zu bestätigen, geben Sie',
+    deleteKeyword: 'LÖSCHEN',
+    inFieldBelow: 'in das Feld unten ein',
+    type: 'Geben Sie',
+    toConfirm: 'zur Bestätigung ein',
+    deleting: 'Löschen...',
+    
+    // Token Usage
+    tokenUsage: 'Token-Nutzung',
+    remaining: 'verbleibend',
+    renewalOn: 'Erneuerung am',
+    upgradePlan: 'Plan upgraden',
     
     // Common
     back: 'Zurück',
@@ -905,6 +1079,17 @@ export const translations: Record<string, Translations> = {
     free: 'Gratuito',
     mostPopular: 'Più popolare',
     securePayment: 'Pagamento sicuro SSL',
+    padawanDescription: 'Piano per principianti che iniziano il loro percorso di innovazione',
+    jediDescription: 'Piano per guerrieri che imparano le arti dell\'innovazione AI',
+    masterJedi: 'Maestro Jedi',
+    masterJediDescription: 'Piano per Jedi che hanno superato e ora possono sconfiggere le forze dell\'inerzia innovativa',
+    masterYoda: 'Maestro Yoda',
+    masterYodaDescription: 'Piano per innovatori che hanno affrontato battaglie e sono pronti a difendere le forze della disruption',
+    unlockInnovationPower: 'Sblocca il potere dell\'innovazione con i nostri piani personalizzati',
+    padawanPlanError: 'Il piano Padawan è il piano iniziale e non può essere acquistato. Si prega di scegliere un altro piano.',
+    errorProcessingRequest: 'Errore nell\'elaborazione della richiesta. Si prega di riprovare.',
+    pciCertified: 'Certificato PCI DSS',
+    fraudProtection: 'Protezione dalle frodi',
     
     // Profile
     updateProfile: 'Aggiorna profilo',
@@ -913,6 +1098,30 @@ export const translations: Record<string, Translations> = {
     dangerZone: 'Zona di pericolo',
     confirmDeletion: 'Conferma eliminazione',
     typeDelete: 'Digita ELIMINA',
+    userNotFound: 'Utente non trovato',
+    errorLoadingData: 'Errore nel caricamento dei dati',
+    userNotAuthenticated: 'Utente non autenticato',
+    profileUpdatedSuccess: 'Profilo aggiornato con successo!',
+    errorUpdatingProfile: 'Errore nell\'aggiornamento del profilo',
+    emailNotFound: 'Email non trovata',
+    passwordResetEmailSent: 'Email di reset password inviata!',
+    errorSendingPasswordReset: 'Errore nell\'invio dell\'email di reset password',
+    incorrectPassword: 'Password errata. Si prega di riprovare.',
+    errorDeletingAccount: 'Errore nell\'eliminazione dell\'account',
+    errorDeletingAccountGeneric: 'Errore nell\'eliminazione dell\'account. Si prega di riprovare.',
+    enterPasswordToConfirm: 'Si prega di inserire la password per confermare l\'eliminazione dell\'account:',
+    confirmAccountDeletion: 'Per confermare l\'eliminazione dell\'account e l\'anonimizzazione dei dati, digita',
+    deleteKeyword: 'ELIMINA',
+    inFieldBelow: 'nel campo sottostante',
+    type: 'Digita',
+    toConfirm: 'per confermare',
+    deleting: 'Eliminazione...',
+    
+    // Token Usage
+    tokenUsage: 'Utilizzo token',
+    remaining: 'rimanenti',
+    renewalOn: 'Rinnovo il',
+    upgradePlan: 'Aggiorna piano',
     
     // Common
     back: 'Indietro',

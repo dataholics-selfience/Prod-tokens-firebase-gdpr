@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { format, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS, fr, de, it } from 'date-fns/locale';
+import { useTranslation } from '../utils/i18n';
 
 interface TokenUsageChartProps {
   totalTokens: number;
@@ -11,9 +12,20 @@ interface TokenUsageChartProps {
 }
 
 const TokenUsageChart = ({ totalTokens, usedTokens }: TokenUsageChartProps) => {
+  const { t, language } = useTranslation();
   const [renewalDate, setRenewalDate] = useState<Date | null>(null);
   const percentage = Math.min((usedTokens / totalTokens) * 100, 100);
   const remainingTokens = totalTokens - usedTokens;
+
+  const getLocale = () => {
+    switch (language) {
+      case 'pt': return ptBR;
+      case 'fr': return fr;
+      case 'de': return de;
+      case 'it': return it;
+      default: return enUS;
+    }
+  };
 
   useEffect(() => {
     const fetchRenewalDate = async () => {
@@ -33,15 +45,30 @@ const TokenUsageChart = ({ totalTokens, usedTokens }: TokenUsageChartProps) => {
     fetchRenewalDate();
   }, []);
 
-  const formattedRenewalDate = renewalDate 
-    ? format(renewalDate, "dd 'de' MMMM", { locale: ptBR })
-    : null;
+  const getFormattedRenewalDate = () => {
+    if (!renewalDate) return null;
+    
+    switch (language) {
+      case 'pt':
+        return format(renewalDate, "dd 'de' MMMM", { locale: ptBR });
+      case 'fr':
+        return format(renewalDate, "dd MMMM", { locale: fr });
+      case 'de':
+        return format(renewalDate, "dd. MMMM", { locale: de });
+      case 'it':
+        return format(renewalDate, "dd MMMM", { locale: it });
+      default:
+        return format(renewalDate, "MMMM dd", { locale: enUS });
+    }
+  };
+
+  const formattedRenewalDate = getFormattedRenewalDate();
 
   return (
     <div className="bg-gray-800 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-400">Uso de Tokens</span>
-        <span className="text-sm text-blue-400">{remainingTokens} restantes</span>
+        <span className="text-sm text-gray-400">{t.tokenUsage || 'Uso de Tokens'}</span>
+        <span className="text-sm text-blue-400">{remainingTokens} {t.remaining || 'restantes'}</span>
       </div>
       
       <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -53,7 +80,7 @@ const TokenUsageChart = ({ totalTokens, usedTokens }: TokenUsageChartProps) => {
 
       {formattedRenewalDate && (
         <div className="mt-2 text-xs text-gray-500">
-          Renovação em {formattedRenewalDate}
+          {t.renewalOn || 'Renovação em'} {formattedRenewalDate}
         </div>
       )}
 
@@ -61,7 +88,7 @@ const TokenUsageChart = ({ totalTokens, usedTokens }: TokenUsageChartProps) => {
         to="/plans" 
         className="mt-3 block text-center text-sm text-blue-400 hover:text-blue-300 transition-colors"
       >
-        Atualizar plano
+        {t.upgradePlan || 'Atualizar plano'}
       </Link>
     </div>
   );
