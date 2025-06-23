@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
+import { useTranslation } from '../../utils/i18n';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,38 +40,30 @@ const Login = () => {
     e.preventDefault();
     
     try {
-      // Reset error state
       setError('');
       
-      // Validate inputs before attempting login
       if (!validateInputs()) {
         return;
       }
 
-      // Set loading state
       setIsLoading(true);
 
-      // Trim values before storing them
       const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
 
-      // Attempt login with a small delay to prevent brute force attempts
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Attempt login
       const userCredential = await signInWithEmailAndPassword(
         auth,
         trimmedEmail,
         trimmedPassword
       );
 
-      // Verify user exists
       const user = userCredential.user;
       if (!user) {
         throw new Error('No user data available');
       }
 
-      // Check email verification
       if (!user.emailVerified) {
         await auth.signOut();
         setError('Por favor, verifique seu email antes de fazer login.');
@@ -77,16 +71,12 @@ const Login = () => {
         return;
       }
 
-      // Clear any existing errors
       setError('');
-      
-      // Navigate on success
       navigate('/', { replace: true });
       
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Handle specific Firebase error codes with more detailed messages
       const errorMessages: { [key: string]: string } = {
         'auth/invalid-credential': 'Email ou senha incorretos. Por favor, verifique suas credenciais e tente novamente.',
         'auth/user-disabled': 'Esta conta foi desativada. Entre em contato com o suporte.',
@@ -100,14 +90,12 @@ const Login = () => {
         'auth/requires-recent-login': 'Por favor, faça login novamente para continuar.',
       };
 
-      // Set appropriate error message with fallback
       setError(
         errorMessages[error.code] || 
         'Ocorreu um erro ao fazer login. Por favor, verifique suas credenciais e tente novamente.'
       );
       
     } finally {
-      // Always reset loading state
       setIsLoading(false);
     }
   };
@@ -125,7 +113,7 @@ const Login = () => {
               e.currentTarget.src = 'fallback-logo.png';
             }}
           />
-          <h2 className="mt-6 text-3xl font-bold text-white">Login</h2>
+          <h2 className="mt-6 text-3xl font-bold text-white">{t.login}</h2>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -143,7 +131,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Email"
+                placeholder={t.email}
                 disabled={isLoading}
                 autoComplete="email"
               />
@@ -155,7 +143,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Senha"
+                placeholder={t.password}
                 disabled={isLoading}
                 minLength={6}
                 autoComplete="current-password"
@@ -171,7 +159,7 @@ const Login = () => {
                 isLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {isLoading ? 'Entrando...' : t.login}
             </button>
           </div>
 
@@ -181,14 +169,14 @@ const Login = () => {
               className="text-sm text-blue-400 hover:text-blue-500"
               tabIndex={isLoading ? -1 : 0}
             >
-              Esqueceu a senha?
+              {t.forgotPassword}
             </Link>
             <Link 
               to="/register" 
               className="text-lg text-blue-400 hover:text-blue-500 font-medium uppercase"
               tabIndex={isLoading ? -1 : 0}
             >
-              CRIAR CONTA
+              {t.createAccount}
             </Link>
           </div>
         </form>

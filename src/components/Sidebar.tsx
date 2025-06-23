@@ -5,9 +5,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import UserProfile from './UserProfile';
+import LanguageSelector from './LanguageSelector';
 import { ChallengeType, StartupListType } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useTranslation } from '../utils/i18n';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSelectChallenge }: SidebarProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [challengeStartups, setChallengeStartups] = useState<Record<string, StartupListType[]>>({});
   const [savedStartupsCount, setSavedStartupsCount] = useState(0);
@@ -99,6 +102,11 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
           </button>
         </div>
 
+        {/* Language Selector */}
+        <div className="px-3 py-2 border-b border-gray-800">
+          <LanguageSelector />
+        </div>
+
         <div className="flex-1 overflow-y-auto scrollbar">
           <div className="p-3 space-y-2">
             <Link 
@@ -106,7 +114,7 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
               className="w-full flex items-center gap-2 text-base font-bold bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white p-3 rounded-lg transition-all shadow-lg hover:shadow-xl"
             >
               <Plus size={18} />
-              <span>Novo desafio</span>
+              <span>{t.newChallenge}</span>
             </Link>
 
             <Link 
@@ -114,7 +122,7 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
               className="w-full flex items-center gap-2 text-base font-medium bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white p-3 rounded-lg transition-all shadow-lg hover:shadow-xl"
             >
               <BarChart3 size={18} />
-              <span>Pipeline CRM</span>
+              <span>{t.pipelineCRM}</span>
               {savedStartupsCount > 0 && (
                 <span className="ml-auto bg-purple-500 text-white text-xs px-2 py-1 rounded-full">
                   {savedStartupsCount}
@@ -124,7 +132,7 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
           </div>
 
           <div className="px-3 mb-2">
-            <h2 className="text-sm font-normal text-gray-400 mb-2">Desafios</h2>
+            <h2 className="text-sm font-normal text-gray-400 mb-2">{t.challenges}</h2>
           </div>
 
           <nav className="px-3">
@@ -172,7 +180,7 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
               onClick={handleLogout}
               className="text-sm text-gray-400 hover:text-white transition-colors"
             >
-              Sair
+              {t.logout}
             </button>
           </div>
         </div>

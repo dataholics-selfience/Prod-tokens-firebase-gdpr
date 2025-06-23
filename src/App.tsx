@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { initializeLanguage } from './utils/i18n';
 import Layout from './components/Layout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
@@ -24,6 +25,22 @@ import MestreYodaSuccess from './pages/plans/success/mestreyoda';
 function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [languageInitialized, setLanguageInitialized] = useState(false);
+
+  useEffect(() => {
+    // Initialize language detection
+    const initLang = async () => {
+      try {
+        await initializeLanguage();
+      } catch (error) {
+        console.error('Language initialization failed:', error);
+      } finally {
+        setLanguageInitialized(true);
+      }
+    };
+
+    initLang();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -49,7 +66,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  if (loading) {
+  if (loading || !languageInitialized) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white">Carregando...</div>

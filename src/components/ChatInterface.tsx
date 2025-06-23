@@ -5,6 +5,7 @@ import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } fro
 import { auth, db } from '../firebase';
 import { MessageType, ChallengeType, TokenUsageType, StartupListType } from '../types';
 import { LoadingStates } from './LoadingStates';
+import { useTranslation } from '../utils/i18n';
 
 interface ChatInterfaceProps {
   messages: MessageType[];
@@ -18,6 +19,7 @@ const MESSAGE_TOKEN_COST = 2;
 const STARTUP_LIST_TOKEN_COST = 50;
 
 const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, currentChallenge }: ChatInterfaceProps) => {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [userInitials, setUserInitials] = useState('');
@@ -328,13 +330,13 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
                   value={editData.title}
                   onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-3 py-1 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Título do desafio"
+                  placeholder={t.challengeTitle}
                 />
                 <textarea
                   value={editData.description}
                   onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full px-3 py-1 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Descrição do desafio"
+                  placeholder={t.challengeDescription}
                   rows={2}
                 />
                 <div className="flex gap-2">
@@ -342,14 +344,14 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
                     type="submit"
                     className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
                   >
-                    Salvar
+                    {t.save}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
                     className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
                   >
-                    Cancelar
+                    {t.cancel}
                   </button>
                 </div>
               </form>
@@ -428,7 +430,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             onChange={handleInput}
             onKeyDown={handleKeyDown}
             onClick={handleInputClick}
-            placeholder={currentChallenge ? "Digite uma mensagem..." : "Selecione um desafio para começar"}
+            placeholder={currentChallenge ? t.typeMessage : t.selectChallenge}
             className="w-full py-3 pl-4 pr-12 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100"
             rows={1}
             disabled={isLoading}

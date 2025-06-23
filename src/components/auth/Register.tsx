@@ -4,8 +4,10 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/
 import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
 import { v4 as uuidv4 } from 'uuid';
+import { useTranslation } from '../../utils/i18n';
 
 const Register = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     cpf: '',
@@ -40,7 +42,6 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Check if email was previously deleted
       const isDeleted = await checkDeletedUser(formData.email);
       if (isDeleted) {
         setError('Email e dados já excluídos da plataforma');
@@ -48,7 +49,6 @@ const Register = () => {
         return;
       }
 
-      // Create the authentication user
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
         formData.email.trim(), 
@@ -60,7 +60,6 @@ const Register = () => {
       const now = new Date();
       const expirationDate = new Date(now.setMonth(now.getMonth() + 1));
 
-      // Prepare user data
       const userData = {
         uid: user.uid,
         name: formData.name.trim(),
@@ -74,10 +73,8 @@ const Register = () => {
         termsAcceptanceId: transactionId
       };
 
-      // Create the user document in Firestore
       await setDoc(doc(db, 'users', user.uid), userData);
 
-      // Create token usage record
       await setDoc(doc(db, 'tokenUsage', user.uid), {
         uid: user.uid,
         email: formData.email.trim().toLowerCase(),
@@ -88,7 +85,6 @@ const Register = () => {
         expirationDate: expirationDate.toISOString()
       });
 
-      // Create GDPR compliance record for terms acceptance
       await setDoc(doc(collection(db, 'gdprCompliance'), transactionId), {
         uid: user.uid,
         email: formData.email.trim().toLowerCase(),
@@ -98,7 +94,6 @@ const Register = () => {
         transactionId
       });
 
-      // Create GDPR compliance record for registration
       await setDoc(doc(collection(db, 'gdprCompliance'), crypto.randomUUID()), {
         uid: user.uid,
         email: formData.email.trim().toLowerCase(),
@@ -107,7 +102,6 @@ const Register = () => {
         transactionId: crypto.randomUUID()
       });
 
-      // Send email verification
       await sendEmailVerification(user);
 
       navigate('/verify-email');
@@ -140,7 +134,7 @@ const Register = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <img src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" alt="Genie Logo" className="mx-auto h-24" />
-          <h2 className="mt-6 text-3xl font-bold text-white">Criar Conta</h2>
+          <h2 className="mt-6 text-3xl font-bold text-white">{t.register}</h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && <div className="text-red-500 text-center bg-red-900/20 p-3 rounded-md">{error}</div>}
@@ -152,7 +146,7 @@ const Register = () => {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nome completo"
+              placeholder={t.name}
             />
             <input
               type="text"
@@ -161,7 +155,7 @@ const Register = () => {
               value={formData.cpf}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="CPF"
+              placeholder={t.cpf}
             />
             <input
               type="text"
@@ -170,7 +164,7 @@ const Register = () => {
               value={formData.company}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Empresa"
+              placeholder={t.company}
             />
             <input
               type="email"
@@ -179,7 +173,7 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Email"
+              placeholder={t.email}
             />
             <input
               type="tel"
@@ -188,7 +182,7 @@ const Register = () => {
               value={formData.phone}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Celular"
+              placeholder={t.phone}
             />
             <input
               type="password"
@@ -197,7 +191,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Senha"
+              placeholder={t.password}
               minLength={6}
             />
             <div className="flex items-center">
@@ -210,7 +204,7 @@ const Register = () => {
                 required
               />
               <label className="ml-2 block text-sm text-gray-300">
-                Li e aceito os termos de uso
+                {t.acceptTerms}
               </label>
             </div>
           </div>
@@ -223,13 +217,13 @@ const Register = () => {
                 isLoading || !formData.terms ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {isLoading ? 'Criando conta...' : 'Criar conta'}
+              {isLoading ? 'Criando conta...' : t.register}
             </button>
           </div>
 
           <div className="text-center">
             <Link to="/login" className="text-lg text-blue-400 hover:text-blue-500 font-medium">
-              Já tem uma conta? Faça login
+              {t.alreadyHaveAccount}
             </Link>
           </div>
         </form>

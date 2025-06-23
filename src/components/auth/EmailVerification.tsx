@@ -3,8 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { onAuthStateChanged, sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, setDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
+import { useTranslation } from '../../utils/i18n';
 
 const EmailVerification = () => {
+  const { t } = useTranslation();
   const [error, setError] = useState('');
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -19,7 +21,6 @@ const EmailVerification = () => {
 
       if (user.emailVerified) {
         try {
-          // Update user activation status
           await setDoc(doc(db, 'users', user.uid), {
             activated: true,
             activatedAt: new Date().toISOString(),
@@ -27,7 +28,6 @@ const EmailVerification = () => {
             uid: user.uid
           }, { merge: true });
 
-          // Record email verification in gdprCompliance
           await setDoc(doc(db, 'gdprCompliance', 'emailVerified'), {
             uid: user.uid,
             email: user.email,
@@ -106,7 +106,7 @@ const EmailVerification = () => {
             alt="Genie Logo" 
             className="mx-auto h-24"
           />
-          <h2 className="mt-6 text-3xl font-bold text-white">Verifique seu Email</h2>
+          <h2 className="mt-6 text-3xl font-bold text-white">{t.verifyEmail}</h2>
           <p className="mt-2 text-gray-400">
             Por favor, verifique seu email para ativar sua conta. 
             Você receberá um link de verificação em breve.
@@ -124,7 +124,7 @@ const EmailVerification = () => {
             onClick={handleLogout}
             className="w-full py-3 px-4 bg-blue-900 hover:bg-blue-800 rounded-md text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Voltar para o Login
+            {t.backToLogin}
           </button>
 
           <div className="text-center">
@@ -135,7 +135,7 @@ const EmailVerification = () => {
             >
               {resendDisabled 
                 ? `Aguarde ${formatTime(countdown)} para reenviar` 
-                : 'Reenviar email de verificação'
+                : t.resendVerification
               }
             </button>
           </div>

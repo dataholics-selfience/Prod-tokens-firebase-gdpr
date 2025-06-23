@@ -4,10 +4,12 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { doc, getDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { useTranslation } from '../utils/i18n';
 
 const STARTUP_LIST_TOKEN_COST = 30;
 
 const NewChallenge = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -78,7 +80,6 @@ const NewChallenge = () => {
       const firstName = userData.name?.split(' ')[0] || '';
       const sessionId = uuidv4().replace(/-/g, '');
 
-      // Create challenge first
       const challengeRef = await addDoc(collection(db, 'challenges'), {
         userId: auth.currentUser.uid,
         userEmail: auth.currentUser.email,
@@ -90,7 +91,6 @@ const NewChallenge = () => {
         createdAt: new Date().toISOString()
       });
 
-      // Prepare webhook message with all required fields
       const message = `Eu sou ${firstName}, um profissional gestor antenado nas novidades e que curte uma fala informal e ao mesmo tempo séria nos assuntos relativos ao Desafio. Eu trabalho na empresa ${userData.company || ''} que atua na área de ${formData.businessArea}. O meu desafio é ${formData.title} e a descrição do desafio é ${formData.description}. Faça uma breve saudação bem humorada e criativa que remete à cultura Geek e que tenha ligação direta com o desafio proposto. Depois, faça de forma direta uma pergu nta sobre o ambiente interno de negócios do cliente, ou seja, sobre sua própira infraestrutura tecnológica, sobre sua operação, sobre os valores envolvidos na perda, ou sobre as possibilidades concretas de implantar a inovação nso processos, sistemas, rotinas ou maquinário - pesquise na internet e seja inteligente ao formular uma linha de questionamento bem embasada, conhecendo muito bem a área de atuação e qual empresa o cliente está representando. Uma pergunta inusitada e útil o suficiente para reforçar a descrição do desafio, com enfoque no ambiente interno da ${userData.company || ''} e seu estágio no quesito de transformação digital.`;
 
       console.log('Sending webhook message:', {
@@ -99,7 +99,6 @@ const NewChallenge = () => {
         challengeId: challengeRef.id
       });
 
-      // Send webhook message
       const response = await fetch('https://primary-production-2e3b.up.railway.app/webhook/production', {
         method: 'POST',
         headers: {
@@ -116,7 +115,6 @@ const NewChallenge = () => {
         throw new Error('Failed to send initial message');
       }
 
-      // Save user message
       await addDoc(collection(db, 'messages'), {
         challengeId: challengeRef.id,
         userId: auth.currentUser.uid,
@@ -126,7 +124,6 @@ const NewChallenge = () => {
         hidden: true
       });
 
-      // Handle webhook response
       const data = await response.json();
       if (data[0]?.output) {
         await addDoc(collection(db, 'messages'), {
@@ -138,7 +135,6 @@ const NewChallenge = () => {
         });
       }
 
-      // Navigate to home page
       navigate('/');
     } catch (error) {
       console.error('Error creating challenge:', error);
@@ -158,7 +154,7 @@ const NewChallenge = () => {
           >
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-white">Novo Desafio</h1>
+          <h1 className="text-2xl font-bold text-white">{t.newChallenge}</h1>
           <div className="w-6" />
         </div>
 
@@ -168,7 +164,7 @@ const NewChallenge = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Título do Desafio
+                {t.challengeTitle}
               </label>
               <input
                 type="text"
@@ -183,7 +179,7 @@ const NewChallenge = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Área de atuação da empresa
+                {t.businessArea}
               </label>
               <input
                 type="text"
@@ -198,7 +194,7 @@ const NewChallenge = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Descrição do Desafio
+                {t.challengeDescription}
               </label>
               <textarea
                 name="description"
@@ -217,7 +213,7 @@ const NewChallenge = () => {
             disabled={isSubmitting}
             className="w-full py-3 px-4 bg-blue-900 hover:bg-blue-800 rounded-md text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center gap-2"
           >
-            <span>Criar Desafio</span>
+            <span>{t.createChallenge}</span>
             {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
           </button>
         </form>

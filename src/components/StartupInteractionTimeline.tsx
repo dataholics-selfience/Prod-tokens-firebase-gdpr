@@ -236,43 +236,38 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
       {/* Header */}
       <div className="flex flex-col p-3 border-b border-gray-800">
         <div className="flex items-center justify-between">
-          <button
-            onClick={handleBackToSavedStartups}
-            className="text-gray-300 hover:text-white focus:outline-none"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex items-center gap-2 flex-1 ml-4">
-            <Building2 size={20} className="text-gray-400" />
-            <h2 className="text-lg font-medium">{startupData.startupName}</h2>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
-        {/* Top Section - Startup Name and Action Buttons */}
-        <div className="bg-gray-800 rounded-lg p-4 lg:p-6 mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <h1 className="text-xl lg:text-2xl font-bold text-white">{startupData.startupData.name}</h1>
-            <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBackToSavedStartups}
+              className="text-gray-300 hover:text-white focus:outline-none"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex items-center gap-2">
+              <Building2 size={20} className="text-gray-400" />
+              <h2 className="text-lg font-medium">{startupData.startupName}</h2>
+            </div>
+            <div className="flex gap-2">
               <button
                 onClick={handleNewContact}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm lg:text-base"
+                className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Novo Contato
               </button>
               <button
                 onClick={handleContactsList}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm lg:text-base"
+                className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
               >
-                <Users size={16} />
+                <Users size={14} />
                 Lista de Contatos
               </button>
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
         {/* Timeline Section */}
         <div className="bg-gray-800 rounded-lg p-4 lg:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
