@@ -201,10 +201,6 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
     return phone;
   };
 
-  const handleNewContact = () => {
-    navigate(`/startup/${startupId}/contacts`);
-  };
-
   const handleContactsList = () => {
     navigate(`/startup/${startupId}/contacts`);
   };
@@ -249,22 +245,15 @@ const StartupInteractionTimeline = ({ onBack }: StartupInteractionTimelineProps)
               <Building2 size={20} className="text-gray-400" />
               <h2 className="text-lg font-medium">{startupData.startupName}</h2>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleNewContact}
-                className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-              >
-                <Plus size={14} />
-                {t.addContact}
-              </button>
-              <button
-                onClick={handleContactsList}
-                className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-              >
-                <Users size={14} />
-                {t.listContacts}
-              </button>
-            </div>
+          </div>
+          <div className="flex justify-center">
+            <button
+              onClick={handleContactsList}
+              className="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <Users size={14} />
+              {t.listContacts}
+            </button>
           </div>
         </div>
       </div>

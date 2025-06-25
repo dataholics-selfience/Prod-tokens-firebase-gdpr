@@ -46,6 +46,13 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // Auto-scroll when loading animation appears
+  useEffect(() => {
+    if (isLoading && responseDelay > 0) {
+      scrollToBottom();
+    }
+  }, [isLoading, responseDelay]);
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (!auth.currentUser) return;
@@ -280,7 +287,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     if (message.content.includes('<startup-list-button>')) {
       return (
         <div className="space-y-4">
-          <p>{message.content.split('<startup-list-button>')[0]}</p>
+          <p className="text-lg font-semibold">{message.content.split('<startup-list-button>')[0]}</p>
           <Link
             to="/startups"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
@@ -295,7 +302,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     if (message.content.includes('<upgrade-plan-button>')) {
       return (
         <div className="space-y-4">
-          <p>{message.content.split('<upgrade-plan-button>')[0]}</p>
+          <p className="text-lg font-semibold">{message.content.split('<upgrade-plan-button>')[0]}</p>
           <Link
             to="/plans"
             className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
@@ -306,14 +313,14 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       );
     }
 
-    return <p className="whitespace-pre-wrap">{message.content}</p>;
+    return <p className="whitespace-pre-wrap text-lg font-semibold">{message.content}</p>;
   };
 
   const visibleMessages = messages.filter(message => !message.hidden);
 
   return (
-    <div className="flex flex-col flex-1 h-full overflow-hidden bg-black">
-      <div className="flex flex-col p-3 border-b border-border">
+    <div className="flex flex-col h-screen bg-black overflow-hidden">
+      <div className="flex flex-col p-3 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <button 
             onClick={toggleSidebar}
@@ -379,7 +386,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar pb-20 md:pb-4">
         {visibleMessages.map((message) => (
           <div
             key={message.id}
@@ -422,7 +429,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border p-4">
+      <div className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto border-t border-border p-4 bg-black flex-shrink-0">
         <form onSubmit={(e) => handleSubmit(e)} className="relative max-w-3xl mx-auto">
           <textarea
             ref={inputRef}
@@ -431,7 +438,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
             onKeyDown={handleKeyDown}
             onClick={handleInputClick}
             placeholder={currentChallenge ? t.typeMessage : t.selectChallenge}
-            className="w-full py-3 pl-4 pr-12 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100"
+            className="w-full py-3 pl-4 pr-12 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100 text-lg font-semibold"
             rows={1}
             disabled={isLoading}
           />
@@ -490,8 +497,11 @@ const StartupListIcons = ({ challengeId }: { challengeId?: string }) => {
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center border-2 border-gray-900 hover:border-blue-500 transition-colors shadow-lg hover:shadow-xl">
             <Rocket size={14} className="text-white" />
           </div>
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Ver lista de startups
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            {list.startups?.length || 0}
+          </div>
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+            {list.startups?.length || 0} startups
           </div>
         </Link>
       ))}

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, FolderClosed, FolderOpen, Rocket, BarChart3 } from 'lucide-react';
+import { Plus, X, FolderClosed, FolderOpen, Rocket, BarChart3, Trash2 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import UserProfile from './UserProfile';
 import LanguageSelector from './LanguageSelector';
 import { ChallengeType, StartupListType } from '../types';
@@ -24,6 +24,8 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
   const navigate = useNavigate();
   const [challengeStartups, setChallengeStartups] = useState<Record<string, StartupListType[]>>({});
   const [savedStartupsCount, setSavedStartupsCount] = useState(0);
+  const [deletingChallengeId, setDeletingChallengeId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStartupLists = async () => {
@@ -68,6 +70,46 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
       await signOut(auth);
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleDeleteChallenge = async (challengeId: string) => {
+    if (!auth.currentUser || deletingChallengeId) return;
+
+    setDeletingChallengeId(challengeId);
+
+    try {
+      // Delete the challenge
+      await deleteDoc(doc(db, 'challenges', challengeId));
+
+      // Delete related messages
+      const messagesQuery = query(
+        collection(db, 'messages'),
+        where('challengeId', '==', challengeId)
+      );
+      const messagesSnapshot = await getDocs(messagesQuery);
+      const deleteMessagesPromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deleteMessagesPromises);
+
+      // Delete related startup lists
+      const startupListsQuery = query(
+        collection(db, 'startupLists'),
+        where('challengeId', '==', challengeId)
+      );
+      const startupListsSnapshot = await getDocs(startupListsQuery);
+      const deleteStartupListsPromises = startupListsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deleteStartupListsPromises);
+
+      // If this was the current challenge, navigate to home
+      if (currentChallengeId === challengeId) {
+        navigate('/');
+      }
+
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error deleting challenge:', error);
+    } finally {
+      setDeletingChallengeId(null);
     }
   };
 
@@ -139,32 +181,70 @@ const Sidebar = ({ isOpen, toggleSidebar, challenges, currentChallengeId, onSele
             {challenges.map((challenge) => {
               const isActive = currentChallengeId === challenge.id;
               const startups = challengeStartups[challenge.id] || [];
+              const isDeleting = deletingChallengeId === challenge.id;
+              const showingDeleteConfirm = showDeleteConfirm === challenge.id;
               
               return (
                 <div key={challenge.id} className="mb-2">
-                  <button
-                    onClick={() => onSelectChallenge(challenge.id)}
-                    className={`w-full flex flex-col text-sm p-2 rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40 text-white'
-                        : 'text-gray-400 hover:bg-gray-900 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isActive ? (
-                        <FolderOpen size={14} className="text-blue-400" />
-                      ) : (
-                        <FolderClosed size={14} className="text-gray-500" />
-                      )}
-                      <span className="truncate text-left flex-1">{challenge.title}</span>
-                      {startups.length > 0 && (
-                        <Rocket size={14} className="text-gray-500" />
-                      )}
+                  {showingDeleteConfirm ? (
+                    <div className="bg-red-900/20 border border-red-600 rounded-lg p-3">
+                      <p className="text-red-200 text-sm mb-3">
+                        Tem certeza que deseja deletar este desafio? Esta ação não pode ser desfeita.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDeleteChallenge(challenge.id)}
+                          disabled={isDeleting}
+                          className="flex-1 py-1 px-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white text-xs rounded transition-colors"
+                        >
+                          {isDeleting ? 'Deletando...' : 'Confirmar'}
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(null)}
+                          disabled={isDeleting}
+                          className="flex-1 py-1 px-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 text-white text-xs rounded transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 pl-6 mt-1">
-                      {formatDate(challenge.createdAt)}
+                  ) : (
+                    <div className="group relative">
+                      <button
+                        onClick={() => onSelectChallenge(challenge.id)}
+                        className={`w-full flex flex-col text-sm p-2 rounded-lg transition-all ${
+                          isActive
+                            ? 'bg-gradient-to-r from-blue-900/40 to-purple-900/40 text-white'
+                            : 'text-gray-400 hover:bg-gray-900 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isActive ? (
+                            <FolderOpen size={14} className="text-blue-400" />
+                          ) : (
+                            <FolderClosed size={14} className="text-gray-500" />
+                          )}
+                          <span className="truncate text-left flex-1">{challenge.title}</span>
+                          {startups.length > 0 && (
+                            <Rocket size={14} className="text-gray-500" />
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 pl-6 mt-1">
+                          {formatDate(challenge.createdAt)}
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDeleteConfirm(challenge.id);
+                        }}
+                        className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-red-900/20"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
-                  </button>
+                  )}
                 </div>
               );
             })}
