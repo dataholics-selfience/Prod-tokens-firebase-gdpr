@@ -12,6 +12,34 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useTranslation } from '../utils/i18n';
 
+interface SavedStartupType {
+  id: string;
+  userId: string;
+  userEmail: string;
+  challengeId: string;
+  challengeTitle: string;
+  startupName: string;
+  startupData: StartupType;
+  selectedAt: string;
+  stage: string;
+  updatedAt: string;
+}
+
+interface PipelineStage {
+  id: string;
+  name: string;
+  color: string;
+  order: number;
+}
+
+const DEFAULT_STAGES: PipelineStage[] = [
+  { id: 'mapeada', name: 'Mapeada', color: 'bg-yellow-200 text-yellow-800 border-yellow-300', order: 0 },
+  { id: 'selecionada', name: 'Selecionada', color: 'bg-blue-200 text-blue-800 border-blue-300', order: 1 },
+  { id: 'contatada', name: 'Contatada', color: 'bg-red-200 text-red-800 border-red-300', order: 2 },
+  { id: 'entrevistada', name: 'Entrevistada', color: 'bg-green-200 text-green-800 border-green-300', order: 3 },
+  { id: 'poc', name: 'POC', color: 'bg-orange-200 text-orange-800 border-orange-300', order: 4 }
+];
+
 const StarRating = ({ rating }: { rating: number }) => {
   const { t } = useTranslation();
   
@@ -164,8 +192,8 @@ const StartupCard = ({
 }) => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [savedDocId, setSavedDocId] = useState<string | null>(null);
+  const [savedStartup, setSavedStartup] = useState<SavedStartupType | null>(null);
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -180,8 +208,8 @@ const StartupCard = ({
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          setIsSaved(true);
-          setSavedDocId(querySnapshot.docs[0].id);
+          const savedData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as SavedStartupType;
+          setSavedStartup(savedData);
         }
       } catch (error) {
         console.error('Error checking if startup is saved:', error);
@@ -191,6 +219,25 @@ const StartupCard = ({
     checkIfSaved();
   }, [startup.name]);
 
+  useEffect(() => {
+    const loadStages = async () => {
+      if (!auth.currentUser) return;
+
+      try {
+        const stagesDoc = await getDocs(query(collection(db, 'pipelineStages'), where('userId', '==', auth.currentUser.uid)));
+        if (!stagesDoc.empty) {
+          const userStages = stagesDoc.docs[0].data().stages as PipelineStage[];
+          const sortedStages = userStages.sort((a, b) => a.order - b.order);
+          setPipelineStages(sortedStages);
+        }
+      } catch (error) {
+        console.error('Error loading stages:', error);
+      }
+    };
+
+    loadStages();
+  }, []);
+
   const handleSelectStartup = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -199,11 +246,10 @@ const StartupCard = ({
     setIsSaving(true);
 
     try {
-      if (isSaved && savedDocId) {
+      if (savedStartup) {
         // Remove startup
-        await deleteDoc(doc(db, 'selectedStartups', savedDocId));
-        setIsSaved(false);
-        setSavedDocId(null);
+        await deleteDoc(doc(db, 'selectedStartups', savedStartup.id));
+        setSavedStartup(null);
       } else {
         // Add startup with "mapeada" stage
         const docRef = await addDoc(collection(db, 'selectedStartups'), {
@@ -217,8 +263,21 @@ const StartupCard = ({
           stage: 'mapeada',
           updatedAt: new Date().toISOString()
         });
-        setIsSaved(true);
-        setSavedDocId(docRef.id);
+        
+        const newSavedStartup = {
+          id: docRef.id,
+          userId: auth.currentUser.uid,
+          userEmail: auth.currentUser.email || '',
+          challengeId,
+          challengeTitle,
+          startupName: startup.name,
+          startupData: startup,
+          selectedAt: new Date().toISOString(),
+          stage: 'mapeada',
+          updatedAt: new Date().toISOString()
+        };
+        
+        setSavedStartup(newSavedStartup);
         
         // Navigate to saved startups page
         navigate('/saved-startups');
@@ -231,6 +290,13 @@ const StartupCard = ({
       setIsSaving(false);
     }
   };
+
+  const getCurrentStage = () => {
+    if (!savedStartup) return null;
+    return pipelineStages.find(stage => stage.id === savedStartup.stage);
+  };
+
+  const currentStage = getCurrentStage();
 
   return (
     <div
@@ -245,17 +311,17 @@ const StartupCard = ({
               onClick={handleSelectStartup}
               disabled={isSaving}
               className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all ${
-                isSaved
-                  ? 'bg-green-600 hover:bg-red-600 text-white'
+                savedStartup
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
                   : isSaving
                   ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              {isSaved ? (
+              {savedStartup ? (
                 <>
                   <X size={16} />
-                  {t.selected}
+                  {t.removeFromPipeline || 'Remover'}
                 </>
               ) : isSaving ? (
                 <>
@@ -270,6 +336,13 @@ const StartupCard = ({
               )}
             </button>
           </div>
+          {currentStage && (
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${currentStage.color}`}>
+                {currentStage.name}
+              </span>
+            </div>
+          )}
           <SocialLinks startup={startup} />
         </div>
         <StarRating rating={startup.rating} />
@@ -320,12 +393,151 @@ const StartupCard = ({
 
 const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
   const { t } = useTranslation();
+  const [savedStartup, setSavedStartup] = useState<SavedStartupType | null>(null);
+  const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
+  const [isSaving, setIsSaving] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!auth.currentUser) return;
+      
+      try {
+        const q = query(
+          collection(db, 'selectedStartups'),
+          where('userId', '==', auth.currentUser.uid),
+          where('startupName', '==', startup.name)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const savedData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as SavedStartupType;
+          setSavedStartup(savedData);
+        }
+      } catch (error) {
+        console.error('Error checking if startup is saved:', error);
+      }
+    };
+
+    checkIfSaved();
+  }, [startup.name]);
+
+  useEffect(() => {
+    const loadStages = async () => {
+      if (!auth.currentUser) return;
+
+      try {
+        const stagesDoc = await getDocs(query(collection(db, 'pipelineStages'), where('userId', '==', auth.currentUser.uid)));
+        if (!stagesDoc.empty) {
+          const userStages = stagesDoc.docs[0].data().stages as PipelineStage[];
+          const sortedStages = userStages.sort((a, b) => a.order - b.order);
+          setPipelineStages(sortedStages);
+        }
+      } catch (error) {
+        console.error('Error loading stages:', error);
+      }
+    };
+
+    loadStages();
+  }, []);
+
+  const handleSelectStartup = async () => {
+    if (!auth.currentUser || isSaving) return;
+
+    setIsSaving(true);
+
+    try {
+      if (savedStartup) {
+        // Remove startup
+        await deleteDoc(doc(db, 'selectedStartups', savedStartup.id));
+        setSavedStartup(null);
+      } else {
+        // Add startup with "mapeada" stage
+        const docRef = await addDoc(collection(db, 'selectedStartups'), {
+          userId: auth.currentUser.uid,
+          userEmail: auth.currentUser.email,
+          challengeId: 'detail-view',
+          challengeTitle: 'Visualização Individual',
+          startupName: startup.name,
+          startupData: startup,
+          selectedAt: new Date().toISOString(),
+          stage: 'mapeada',
+          updatedAt: new Date().toISOString()
+        });
+        
+        const newSavedStartup = {
+          id: docRef.id,
+          userId: auth.currentUser.uid,
+          userEmail: auth.currentUser.email || '',
+          challengeId: 'detail-view',
+          challengeTitle: 'Visualização Individual',
+          startupName: startup.name,
+          startupData: startup,
+          selectedAt: new Date().toISOString(),
+          stage: 'mapeada',
+          updatedAt: new Date().toISOString()
+        };
+        
+        setSavedStartup(newSavedStartup);
+        
+        // Navigate to saved startups page
+        navigate('/saved-startups');
+      }
+    } catch (error) {
+      console.error('Error saving/removing startup:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getCurrentStage = () => {
+    if (!savedStartup) return null;
+    return pipelineStages.find(stage => stage.id === savedStartup.stage);
+  };
+
+  const currentStage = getCurrentStage();
   
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6">
       <div className="flex justify-between items-start mb-4">
         <div className="space-y-3">
-          <h2 className="text-xl font-bold text-white">{startup.name}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-white">{startup.name}</h2>
+            <button
+              onClick={handleSelectStartup}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                savedStartup
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : isSaving
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {savedStartup ? (
+                <>
+                  <X size={16} />
+                  {t.removeFromPipeline || 'Remover'}
+                </>
+              ) : isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                  {t.saving}
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  {t.selectStartup}
+                </>
+              )}
+            </button>
+          </div>
+          {currentStage && (
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${currentStage.color}`}>
+                {currentStage.name}
+              </span>
+            </div>
+          )}
           <SocialLinks startup={startup} />
         </div>
         <StarRating rating={startup.rating} />
