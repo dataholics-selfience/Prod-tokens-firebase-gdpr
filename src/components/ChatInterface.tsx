@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, SendHorizontal, Rocket, FolderOpen, Pencil } from 'lucide-react';
+import { Menu, SendHorizontal, Rocket, FolderOpen, Pencil, Mic, MicOff } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -18,6 +18,14 @@ interface ChatInterfaceProps {
 const MESSAGE_TOKEN_COST = 2;
 const STARTUP_LIST_TOKEN_COST = 50;
 
+// Declare speech recognition types
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, currentChallenge }: ChatInterfaceProps) => {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
@@ -30,8 +38,10 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
     description: ''
   });
   const [responseDelay, setResponseDelay] = useState<number>(0);
-  const responseTimer = useRef<NodeJS.Timeout>();
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
   
+  const responseTimer = useRef<NodeJS.Timeout>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
@@ -52,6 +62,60 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       scrollToBottom();
     }
   }, [isLoading, responseDelay]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+      recognitionInstance.lang = 'pt-BR';
+      
+      recognitionInstance.onstart = () => {
+        console.log('Speech recognition started');
+        setIsRecording(true);
+      };
+      
+      recognitionInstance.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript) {
+          setInput(prev => prev + finalTranscript);
+          if (inputRef.current) {
+            inputRef.current.style.height = 'auto';
+            inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 200)}px`;
+          }
+        }
+      };
+      
+      recognitionInstance.onend = () => {
+        console.log('Speech recognition ended');
+        setIsRecording(false);
+      };
+      
+      recognitionInstance.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        if (event.error === 'not-allowed') {
+          alert('Permissão de microfone negada. Por favor, permita o acesso ao microfone.');
+        }
+      };
+      
+      setRecognition(recognitionInstance);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -137,6 +201,24 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating challenge:', error);
+    }
+  };
+
+  const handleMicrophoneClick = () => {
+    if (!recognition) {
+      alert('Seu navegador não suporta reconhecimento de voz. Tente usar Chrome ou Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        alert('Erro ao iniciar o reconhecimento de voz. Verifique as permissões do microfone.');
+      }
     }
   };
 
@@ -430,28 +512,46 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto border-t border-border p-4 bg-black flex-shrink-0 w-full">
-        <form onSubmit={(e) => handleSubmit(e)} className="relative w-full max-w-none">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            onClick={handleInputClick}
-            placeholder={currentChallenge ? t.typeMessage : t.selectChallenge}
-            className="w-full py-3 pl-4 pr-12 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100 text-lg font-semibold"
-            rows={1}
-            disabled={isLoading}
-            style={{ width: '95%', margin: '0 auto', display: 'block' }}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className={`absolute right-2 bottom-2.5 p-1.5 rounded-md ${
-              input.trim() && !isLoading ? 'text-blue-500 hover:bg-gray-700' : 'text-gray-500'
-            } transition-colors`}
-          >
-            <SendHorizontal size={20} />
-          </button>
+        <form onSubmit={handleSubmit} className="relative w-full max-w-none">
+          <div className="relative" style={{ width: '95%', margin: '0 auto' }}>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              onClick={handleInputClick}
+              placeholder={currentChallenge ? t.typeMessage : t.selectChallenge}
+              className="w-full py-3 pl-4 pr-20 bg-gray-800 border border-gray-700 rounded-lg resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-[200px] text-gray-100 text-lg font-semibold"
+              rows={1}
+              disabled={isLoading}
+            />
+            <div className="absolute right-2 bottom-2.5 flex items-center gap-2">
+              {recognition && (
+                <button
+                  type="button"
+                  onClick={handleMicrophoneClick}
+                  disabled={isLoading}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    isRecording
+                      ? 'text-red-500 bg-red-100 hover:bg-red-200'
+                      : 'text-gray-500 hover:text-gray-400 hover:bg-gray-700'
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={isRecording ? 'Parar gravação' : 'Gravar áudio'}
+                >
+                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className={`p-1.5 rounded-md transition-colors ${
+                  input.trim() && !isLoading ? 'text-blue-500 hover:bg-gray-700' : 'text-gray-500'
+                }`}
+              >
+                <SendHorizontal size={20} />
+              </button>
+            </div>
+          </div>
         </form>
       </div>
     </div>
