@@ -179,13 +179,29 @@ const sendAutomaticMessage = async (
   senderName: string,
   senderCompany: string
 ) => {
-  if (!template.trim()) return;
+  // CRITICAL: Only send message if template is configured and not empty
+  if (!template || template.trim() === '') {
+    console.log(`No ${messageType} template configured for stage ${stage.name}, skipping automatic message`);
+    return;
+  }
 
   // Get the first contact or use startup data
   const contact = startup.startupData.contacts?.[0];
   const recipientName = contact?.name || startup.startupData.name;
   const recipientEmail = contact?.emails?.[0] || startup.startupData.email;
   const recipientPhone = contact?.phones?.[0];
+
+  // For email, also check if we have a valid recipient email
+  if (messageType === 'email' && (!recipientEmail || recipientEmail.trim() === '')) {
+    console.log(`No recipient email available for startup ${startup.startupName}, skipping automatic email`);
+    return;
+  }
+
+  // For WhatsApp, check if we have a valid recipient phone
+  if (messageType === 'whatsapp' && (!recipientPhone || recipientPhone.trim() === '')) {
+    console.log(`No recipient phone available for startup ${startup.startupName}, skipping automatic WhatsApp`);
+    return;
+  }
 
   // Replace template variables
   let processedMessage = template
@@ -286,6 +302,8 @@ const sendAutomaticMessage = async (
         stageId: stage.id
       });
 
+      console.log(`Automatic email sent for startup ${startup.startupName} moving to stage ${stage.name}`);
+
     } else if (messageType === 'whatsapp' && recipientPhone) {
       // Format phone for Evolution API
       const formatPhoneForEvolution = (phone: string): string => {
@@ -340,10 +358,14 @@ const sendAutomaticMessage = async (
           automatic: true,
           stageId: stage.id
         });
+
+        console.log(`Automatic WhatsApp sent for startup ${startup.startupName} moving to stage ${stage.name}`);
+      } else {
+        console.error(`Failed to send automatic WhatsApp for startup ${startup.startupName}:`, await evolutionResponse.text());
       }
     }
   } catch (error) {
-    console.error(`Error sending automatic ${messageType} message:`, error);
+    console.error(`Error sending automatic ${messageType} message for startup ${startup.startupName}:`, error);
   }
 };
 
@@ -608,8 +630,9 @@ const PipelineBoard = ({
       // Find the new stage configuration
       const stageConfig = stages.find(s => s.id === newStage);
       if (stageConfig) {
-        // Send automatic messages if templates are configured
-        if (stageConfig.emailTemplate && stageConfig.emailTemplate.trim()) {
+        // CRITICAL: Only send automatic messages if templates are configured and not empty
+        if (stageConfig.emailTemplate && stageConfig.emailTemplate.trim() !== '') {
+          console.log(`Sending automatic email for stage ${stageConfig.name}`);
           await sendAutomaticMessage(
             startup,
             stageConfig,
@@ -619,9 +642,12 @@ const PipelineBoard = ({
             senderName,
             senderCompany
           );
+        } else {
+          console.log(`No email template configured for stage ${stageConfig.name}, skipping automatic email`);
         }
 
-        if (stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim()) {
+        if (stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim() !== '') {
+          console.log(`Sending automatic WhatsApp for stage ${stageConfig.name}`);
           await sendAutomaticMessage(
             startup,
             stageConfig,
@@ -631,6 +657,8 @@ const PipelineBoard = ({
             senderName,
             senderCompany
           );
+        } else {
+          console.log(`No WhatsApp template configured for stage ${stageConfig.name}, skipping automatic WhatsApp`);
         }
       }
 
