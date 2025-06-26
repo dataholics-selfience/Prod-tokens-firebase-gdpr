@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Star, Calendar, Building2, MapPin, Users, Briefcase, Award, 
   Target, Rocket, ArrowLeft, Mail, Globe, Box, Linkedin,
-  Facebook, Twitter, Instagram, FolderOpen, Plus, Check, X
+  Facebook, Twitter, Instagram, FolderOpen, Plus, Check, X, BarChart3
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, where, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -11,6 +11,7 @@ import { StartupListType, StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useTranslation } from '../utils/i18n';
+import { Link } from 'react-router-dom';
 
 interface SavedStartupType {
   id: string;
@@ -194,7 +195,6 @@ const StartupCard = ({
   const [isSaving, setIsSaving] = useState(false);
   const [savedStartup, setSavedStartup] = useState<SavedStartupType | null>(null);
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkIfSaved = async () => {
@@ -278,9 +278,6 @@ const StartupCard = ({
         };
         
         setSavedStartup(newSavedStartup);
-        
-        // Navigate to saved startups page
-        navigate('/saved-startups');
       }
 
       onStartupSaved();
@@ -396,7 +393,6 @@ const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
   const [savedStartup, setSavedStartup] = useState<SavedStartupType | null>(null);
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
   const [isSaving, setIsSaving] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkIfSaved = async () => {
@@ -478,9 +474,6 @@ const StartupDetailCard = ({ startup }: { startup: StartupType }) => {
         };
         
         setSavedStartup(newSavedStartup);
-        
-        // Navigate to saved startups page
-        navigate('/saved-startups');
       }
     } catch (error) {
       console.error('Error saving/removing startup:', error);
@@ -677,7 +670,16 @@ const StartupList = () => {
             <FolderOpen size={20} className="text-gray-400" />
             <h2 className="text-lg font-medium">{startupData.challengeTitle}</h2>
           </div>
-          <span className="text-sm text-gray-400">{formattedDate}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400">{formattedDate}</span>
+            <Link
+              to="/saved-startups"
+              className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <BarChart3 size={16} />
+              Pipeline CRM
+            </Link>
+          </div>
         </div>
       </div>
 

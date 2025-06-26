@@ -4,7 +4,7 @@ import {
   Star, Calendar, Building2, MapPin, Users, Briefcase, 
   ArrowLeft, Mail, Globe, Box, Linkedin, Facebook, 
   Twitter, Instagram, Trash2, FolderOpen, ChevronRight,
-  ChevronLeft, Plus, GripVertical, Settings
+  ChevronLeft, Plus, GripVertical, Settings, Edit
 } from 'lucide-react';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -32,15 +32,56 @@ interface PipelineStage {
   color: string;
   order: number;
   emailTemplate?: string;
+  emailSubject?: string;
   whatsappTemplate?: string;
 }
 
 const DEFAULT_STAGES: PipelineStage[] = [
-  { id: 'mapeada', name: 'Mapeada', color: 'bg-yellow-200 text-yellow-800 border-yellow-300', order: 0 },
-  { id: 'selecionada', name: 'Selecionada', color: 'bg-blue-200 text-blue-800 border-blue-300', order: 1 },
-  { id: 'contatada', name: 'Contatada', color: 'bg-red-200 text-red-800 border-red-300', order: 2 },
-  { id: 'entrevistada', name: 'Entrevistada', color: 'bg-green-200 text-green-800 border-green-300', order: 3 },
-  { id: 'poc', name: 'POC', color: 'bg-orange-200 text-orange-800 border-orange-300', order: 4 }
+  { 
+    id: 'mapeada', 
+    name: 'Mapeada', 
+    color: 'bg-yellow-200 text-yellow-800 border-yellow-300', 
+    order: 0,
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
+  },
+  { 
+    id: 'selecionada', 
+    name: 'Selecionada', 
+    color: 'bg-blue-200 text-blue-800 border-blue-300', 
+    order: 1,
+    emailSubject: '{{senderCompany}} - Oportunidade de Colaboração com {{startupName}}',
+    emailTemplate: 'Olá {{startupName}},\n\nEspero que esteja bem! Sou {{senderName}} da {{senderCompany}}.\n\nTemos acompanhado o trabalho da {{startupName}} e ficamos impressionados com a solução que vocês desenvolveram. Acreditamos que há uma grande sinergia entre nossos objetivos e gostaríamos de explorar possibilidades de colaboração.\n\nGostaria de agendar uma conversa para conhecermos melhor a {{startupName}} e apresentarmos nossa empresa e nossos desafios.\n\nFico no aguardo do seu retorno.\n\nAtenciosamente,\n{{senderName}}',
+    whatsappTemplate: 'Olá! Sou {{senderName}} da {{senderCompany}}. Ficamos impressionados com a solução da {{startupName}} e gostaríamos de explorar uma possível colaboração. Podemos agendar uma conversa? 🚀'
+  },
+  { 
+    id: 'contatada', 
+    name: 'Contatada', 
+    color: 'bg-red-200 text-red-800 border-red-300', 
+    order: 2,
+    emailSubject: '{{senderCompany}} - Próximos Passos com {{startupName}}',
+    emailTemplate: 'Olá {{startupName}},\n\nObrigado pelo retorno! Fico feliz em saber do interesse em nossa proposta de colaboração.\n\nPara darmos continuidade, gostaria de agendar uma reunião para:\n- Apresentarmos nossa empresa e nossos desafios\n- Conhecermos melhor a solução da {{startupName}}\n- Discutirmos possibilidades de parceria\n\nTeria disponibilidade para uma conversa na próxima semana?\n\nAguardo seu retorno.\n\nAtenciosamente,\n{{senderName}}',
+    whatsappTemplate: 'Ótimo! Que tal agendarmos uma reunião para apresentarmos nossos desafios e conhecermos melhor a solução da {{startupName}}? Teria disponibilidade na próxima semana? 📅'
+  },
+  { 
+    id: 'entrevistada', 
+    name: 'Entrevistada', 
+    color: 'bg-green-200 text-green-800 border-green-300', 
+    order: 3,
+    emailSubject: '{{senderCompany}} - Avançando para POC com {{startupName}}',
+    emailTemplate: 'Olá {{startupName}},\n\nFoi um prazer conhecer melhor a equipe e a solução da {{startupName}} em nossa reunião.\n\nFicamos muito empolgados com as possibilidades de colaboração e gostaríamos de avançar para a próxima etapa: desenvolvimento de um Proof of Concept (POC).\n\nVamos preparar um briefing detalhado com os requisitos e objetivos do POC. Em breve entraremos em contato com mais informações.\n\nObrigado pelo tempo e dedicação!\n\nAtenciosamente,\n{{senderName}}',
+    whatsappTemplate: 'Excelente reunião! Ficamos empolgados com a {{startupName}} e queremos avançar para um POC. Em breve enviaremos o briefing detalhado. Obrigado! 🎯'
+  },
+  { 
+    id: 'poc', 
+    name: 'POC', 
+    color: 'bg-orange-200 text-orange-800 border-orange-300', 
+    order: 4,
+    emailSubject: '{{senderCompany}} - Briefing POC {{startupName}}',
+    emailTemplate: 'Olá {{startupName}},\n\nParabéns! Chegamos à etapa de Proof of Concept.\n\nSegue em anexo o briefing detalhado com:\n- Objetivos do POC\n- Requisitos técnicos\n- Cronograma proposto\n- Critérios de avaliação\n\nEstamos ansiosos para ver a solução da {{startupName}} em ação e avaliar como podemos integrar essa inovação em nossos processos.\n\nQualquer dúvida, estou à disposição.\n\nVamos inovar juntos!\n\n{{senderName}}',
+    whatsappTemplate: 'Parabéns {{startupName}}! 🎉 Chegamos ao POC! Enviamos o briefing detalhado por email. Estamos ansiosos para ver a solução em ação! Vamos inovar juntos! 💡'
+  }
 ];
 
 const EVOLUTION_API_CONFIG = {
@@ -372,6 +413,7 @@ const PipelineStage = ({
   onStartupClick,
   onRemoveStartup,
   onDeleteStage,
+  onCustomizeMessage,
   canDeleteStage
 }: { 
   stage: PipelineStage;
@@ -380,6 +422,7 @@ const PipelineStage = ({
   onStartupClick: (startupId: string) => void;
   onRemoveStartup: (id: string) => void;
   onDeleteStage: (stageId: string) => void;
+  onCustomizeMessage: (stage: PipelineStage) => void;
   canDeleteStage: boolean;
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -419,6 +462,8 @@ const PipelineStage = ({
     setShowDeleteConfirm(false);
   };
 
+  const hasTemplates = stage.emailTemplate || stage.whatsappTemplate;
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -435,14 +480,24 @@ const PipelineStage = ({
           {stage.name}
           <span className="text-sm font-normal">({startups.length})</span>
         </h3>
-        {canDeleteStage && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleDeleteStage}
-            className="text-gray-400 hover:text-red-400 p-1 rounded hover:bg-gray-700 transition-colors"
+            onClick={() => onCustomizeMessage(stage)}
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
+            title="Personalizar mensagem"
           >
-            <Trash2 size={14} />
+            <Edit size={12} />
+            Personalizar
           </button>
-        )}
+          {canDeleteStage && (
+            <button
+              onClick={handleDeleteStage}
+              className="text-gray-400 hover:text-red-400 p-1 rounded hover:bg-gray-700 transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
       
       <div className="space-y-2">
@@ -499,7 +554,8 @@ const PipelineBoard = ({
   onStageChange, 
   onStartupClick,
   onRemoveStartup,
-  onDeleteStage
+  onDeleteStage,
+  onCustomizeMessage
 }: { 
   startups: SavedStartupType[];
   stages: PipelineStage[];
@@ -507,6 +563,7 @@ const PipelineBoard = ({
   onStartupClick: (startupId: string) => void;
   onRemoveStartup: (id: string) => void;
   onDeleteStage: (stageId: string) => void;
+  onCustomizeMessage: (stage: PipelineStage) => void;
 }) => {
   const handleDrop = async (startupId: string, newStage: string) => {
     try {
@@ -574,6 +631,7 @@ const PipelineBoard = ({
               onStartupClick={onStartupClick}
               onRemoveStartup={onRemoveStartup}
               onDeleteStage={onDeleteStage}
+              onCustomizeMessage={onCustomizeMessage}
               canDeleteStage={stages.length > 1}
             />
           );
@@ -594,6 +652,7 @@ const PipelineBoard = ({
               onStartupClick={onStartupClick}
               onRemoveStartup={onRemoveStartup}
               onDeleteStage={onDeleteStage}
+              onCustomizeMessage={onCustomizeMessage}
               canDeleteStage={stages.length > 1}
             />
           );
@@ -756,6 +815,11 @@ const SavedStartups = () => {
     }
   };
 
+  const handleCustomizeMessage = (stage: PipelineStage) => {
+    // Navigate to the stage manager with the specific stage selected for editing
+    setShowStageManager(true);
+  };
+
   // Calculate total startup count
   const totalStartupCount = savedStartups.length;
 
@@ -865,6 +929,7 @@ const SavedStartups = () => {
               onStartupClick={handleStartupInteractionClick}
               onRemoveStartup={handleRemoveStartup}
               onDeleteStage={handleDeleteStage}
+              onCustomizeMessage={handleCustomizeMessage}
             />
           )}
         </div>

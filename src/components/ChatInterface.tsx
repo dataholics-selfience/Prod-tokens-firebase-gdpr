@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, SendHorizontal, Rocket, FolderOpen, Pencil, Mic, MicOff } from 'lucide-react';
+import { Menu, SendHorizontal, Rocket, FolderOpen, Pencil, Mic, MicOff, BarChart3 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -40,6 +40,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   const [responseDelay, setResponseDelay] = useState<number>(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
+  const [forceRender, setForceRender] = useState(0);
   
   const responseTimer = useRef<NodeJS.Timeout>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,6 +63,18 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       scrollToBottom();
     }
   }, [isLoading, responseDelay]);
+
+  // Force re-render when user returns to page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setForceRender(prev => prev + 1);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -307,7 +320,8 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
               hidden: false
             });
 
-            navigate('/startups');
+            // Force re-render to ensure startup cards display properly
+            setForceRender(prev => prev + 1);
           } else {
             await addMessage({ 
               role: 'assistant', 
@@ -368,7 +382,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
   const renderMessage = (message: MessageType) => {
     if (message.content.includes('<startup-list-button>')) {
       return (
-        <div className="space-y-4">
+        <div className="space-y-4" key={`${message.id}-${forceRender}`}>
           <p className="text-lg font-semibold">{message.content.split('<startup-list-button>')[0]}</p>
           <Link
             to="/startups"
@@ -383,7 +397,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
 
     if (message.content.includes('<upgrade-plan-button>')) {
       return (
-        <div className="space-y-4">
+        <div className="space-y-4" key={`${message.id}-${forceRender}`}>
           <p className="text-lg font-semibold">{message.content.split('<upgrade-plan-button>')[0]}</p>
           <Link
             to="/plans"
@@ -395,7 +409,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       );
     }
 
-    return <p className="whitespace-pre-wrap text-lg font-semibold">{message.content}</p>;
+    return <p className="whitespace-pre-wrap text-lg font-semibold" key={`${message.id}-${forceRender}`}>{message.content}</p>;
   };
 
   const visibleMessages = messages.filter(message => !message.hidden);
@@ -461,7 +475,16 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
                     <Pencil size={16} />
                   </button>
                 </div>
-                <StartupListIcons challengeId={currentChallenge?.id} />
+                <div className="flex items-center gap-4">
+                  <StartupListIcons challengeId={currentChallenge?.id} />
+                  <Link
+                    to="/saved-startups"
+                    className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    <BarChart3 size={16} />
+                    Pipeline CRM
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -471,7 +494,7 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar pb-20 md:pb-4 w-full">
         {visibleMessages.map((message) => (
           <div
-            key={message.id}
+            key={`${message.id}-${forceRender}`}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}
           >
             <div
