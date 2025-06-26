@@ -6,7 +6,7 @@ import {
   Twitter, Instagram, Trash2, FolderOpen, ChevronRight,
   ChevronLeft, Plus, GripVertical, Settings
 } from 'lucide-react';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
@@ -31,6 +31,8 @@ interface PipelineStage {
   name: string;
   color: string;
   order: number;
+  emailTemplate?: string;
+  whatsappTemplate?: string;
 }
 
 const DEFAULT_STAGES: PipelineStage[] = [
@@ -40,6 +42,11 @@ const DEFAULT_STAGES: PipelineStage[] = [
   { id: 'entrevistada', name: 'Entrevistada', color: 'bg-green-200 text-green-800 border-green-300', order: 3 },
   { id: 'poc', name: 'POC', color: 'bg-orange-200 text-orange-800 border-orange-300', order: 4 }
 ];
+
+const EVOLUTION_API_CONFIG = {
+  baseUrl: 'https://evolution-api-production-f719.up.railway.app',
+  instanceKey: '215D70C6CC83-4EE4-B55A-DE7D4146CBF1'
+};
 
 const StarRating = ({ rating }: { rating: number }) => {
   return (
@@ -120,6 +127,176 @@ const SocialLinks = ({ startup, className = "" }: { startup: StartupType; classN
       ))}
     </div>
   );
+};
+
+const sendAutomaticMessage = async (
+  startup: SavedStartupType, 
+  stage: PipelineStage,
+  messageType: 'email' | 'whatsapp',
+  template: string,
+  senderName: string,
+  senderCompany: string
+) => {
+  if (!template.trim()) return;
+
+  // Get the first contact or use startup data
+  const contact = startup.startupData.contacts?.[0];
+  const recipientName = contact?.name || startup.startupData.name;
+  const recipientEmail = contact?.emails?.[0] || startup.startupData.email;
+  const recipientPhone = contact?.phones?.[0];
+
+  // Replace template variables
+  let processedMessage = template
+    .replace(/{{startupName}}/g, startup.startupName)
+    .replace(/{{senderName}}/g, senderName)
+    .replace(/{{senderCompany}}/g, senderCompany)
+    .replace(/{{recipientName}}/g, recipientName);
+
+  try {
+    if (messageType === 'email' && recipientEmail) {
+      // Send email via MailerSend Firebase Extension
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Mensagem da Gen.OI</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <img src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" alt="Gen.OI" style="height: 60px; margin-bottom: 20px;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">Gen.OI - Inovação Aberta</h1>
+          </div>
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <div style="white-space: pre-wrap; margin-bottom: 25px; font-size: 16px;">
+                ${processedMessage}
+              </div>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+              <div style="font-size: 14px; color: #666;">
+                <p><strong>Atenciosamente,</strong><br>
+                ${senderName}, ${senderCompany}</p>
+                <p style="margin-top: 20px;">
+                  <strong>Gen.OI</strong><br>
+                  Conectando empresas às melhores startups do mundo<br>
+                  🌐 <a href="https://genoi.net" style="color: #667eea;">genoi.net</a><br>
+                  📧 <a href="mailto:contact@genoi.net" style="color: #667eea;">contact@genoi.net</a>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+            <p>Esta mensagem foi enviada automaticamente através da plataforma Gen.OI de inovação aberta.</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const emailPayload = {
+        to: [{ 
+          email: recipientEmail, 
+          name: recipientName 
+        }],
+        from: { 
+          email: 'contact@genoi.com.br', 
+          name: 'Gen.OI - Inovação Aberta' 
+        },
+        subject: `${senderCompany} - ${stage.name}`,
+        html: emailHtml,
+        text: processedMessage,
+        reply_to: { 
+          email: 'contact@genoi.net', 
+          name: 'Gen.OI - Suporte' 
+        },
+        tags: ['crm', 'automatic-message', stage.id],
+        metadata: { 
+          startupId: startup.id, 
+          userId: startup.userId,
+          stageId: stage.id,
+          automatic: true,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      await addDoc(collection(db, 'emails'), emailPayload);
+
+      // Save to CRM messages
+      await addDoc(collection(db, 'crmMessages'), {
+        startupId: startup.id,
+        userId: startup.userId,
+        senderName,
+        recipientName,
+        recipientEmail,
+        recipientType: contact?.type || 'startup',
+        messageType: 'email',
+        subject: `${senderCompany} - ${stage.name}`,
+        message: processedMessage,
+        sentAt: new Date().toISOString(),
+        status: 'sent',
+        automatic: true,
+        stageId: stage.id
+      });
+
+    } else if (messageType === 'whatsapp' && recipientPhone) {
+      // Format phone for Evolution API
+      const formatPhoneForEvolution = (phone: string): string => {
+        const cleanPhone = phone.replace(/\D/g, '');
+        
+        if (cleanPhone.startsWith('55')) {
+          return cleanPhone;
+        } else if (cleanPhone.length === 11) {
+          return '55' + cleanPhone;
+        } else if (cleanPhone.length === 10) {
+          return '55' + cleanPhone;
+        }
+        
+        return cleanPhone;
+      };
+
+      const formattedPhone = formatPhoneForEvolution(recipientPhone);
+      
+      // Add footer to WhatsApp message
+      processedMessage += `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
+      
+      const evolutionPayload = {
+        number: formattedPhone,
+        text: processedMessage
+      };
+
+      const evolutionResponse = await fetch(
+        `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_CONFIG.instanceKey
+          },
+          body: JSON.stringify(evolutionPayload)
+        }
+      );
+
+      if (evolutionResponse.ok) {
+        // Save to CRM messages
+        await addDoc(collection(db, 'crmMessages'), {
+          startupId: startup.id,
+          userId: startup.userId,
+          senderName,
+          recipientName,
+          recipientPhone: formattedPhone,
+          recipientType: contact?.type || 'startup',
+          messageType: 'whatsapp',
+          message: processedMessage,
+          sentAt: new Date().toISOString(),
+          status: 'sent',
+          automatic: true,
+          stageId: stage.id
+        });
+      }
+    }
+  } catch (error) {
+    console.error(`Error sending automatic ${messageType} message:`, error);
+  }
 };
 
 const DraggableStartupCard = ({ 
@@ -333,10 +510,48 @@ const PipelineBoard = ({
 }) => {
   const handleDrop = async (startupId: string, newStage: string) => {
     try {
+      const startup = startups.find(s => s.id === startupId);
+      if (!startup) return;
+
+      // Update startup stage in database
       await updateDoc(doc(db, 'selectedStartups', startupId), {
         stage: newStage,
         updatedAt: new Date().toISOString()
       });
+
+      // Get user data for automatic messages
+      const userDoc = await getDoc(doc(db, 'users', startup.userId));
+      const userData = userDoc.data();
+      const senderName = userData?.name || '';
+      const senderCompany = userData?.company || '';
+
+      // Find the new stage configuration
+      const stageConfig = stages.find(s => s.id === newStage);
+      if (stageConfig && (stageConfig.emailTemplate || stageConfig.whatsappTemplate)) {
+        // Send automatic messages if templates are configured
+        if (stageConfig.emailTemplate) {
+          await sendAutomaticMessage(
+            startup,
+            stageConfig,
+            'email',
+            stageConfig.emailTemplate,
+            senderName,
+            senderCompany
+          );
+        }
+
+        if (stageConfig.whatsappTemplate) {
+          await sendAutomaticMessage(
+            startup,
+            stageConfig,
+            'whatsapp',
+            stageConfig.whatsappTemplate,
+            senderName,
+            senderCompany
+          );
+        }
+      }
+
       onStageChange(startupId, newStage);
     } catch (error) {
       console.error('Error updating stage:', error);
