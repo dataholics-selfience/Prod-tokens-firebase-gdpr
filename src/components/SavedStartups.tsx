@@ -203,18 +203,19 @@ const sendAutomaticMessage = async (
     return;
   }
 
-  // Replace template variables
+  // CRITICAL: Replace template variables with EXACT user-configured content
+  // Do NOT modify the message content beyond variable replacement
   let processedMessage = template
-    .replace(/{{startupName}}/g, startup.startupName)
-    .replace(/{{senderName}}/g, senderName)
-    .replace(/{{senderCompany}}/g, senderCompany)
-    .replace(/{{recipientName}}/g, recipientName);
+    .replace(/\{\{startupName\}\}/g, startup.startupName)
+    .replace(/\{\{senderName\}\}/g, senderName)
+    .replace(/\{\{senderCompany\}\}/g, senderCompany)
+    .replace(/\{\{recipientName\}\}/g, recipientName);
 
   let processedSubject = subject
-    .replace(/{{startupName}}/g, startup.startupName)
-    .replace(/{{senderName}}/g, senderName)
-    .replace(/{{senderCompany}}/g, senderCompany)
-    .replace(/{{recipientName}}/g, recipientName);
+    .replace(/\{\{startupName\}\}/g, startup.startupName)
+    .replace(/\{\{senderName\}\}/g, senderName)
+    .replace(/\{\{senderCompany\}\}/g, senderCompany)
+    .replace(/\{\{recipientName\}\}/g, recipientName);
 
   try {
     if (messageType === 'email' && recipientEmail) {
@@ -322,12 +323,12 @@ const sendAutomaticMessage = async (
 
       const formattedPhone = formatPhoneForEvolution(recipientPhone);
       
-      // Add footer to WhatsApp message
-      processedMessage += `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
+      // Add footer to WhatsApp message - ONLY add footer, do not modify the user's message
+      const finalWhatsAppMessage = processedMessage + `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
       
       const evolutionPayload = {
         number: formattedPhone,
-        text: processedMessage
+        text: finalWhatsAppMessage
       };
 
       const evolutionResponse = await fetch(
@@ -352,7 +353,7 @@ const sendAutomaticMessage = async (
           recipientPhone: formattedPhone,
           recipientType: contact?.type || 'startup',
           messageType: 'whatsapp',
-          message: processedMessage,
+          message: finalWhatsAppMessage,
           sentAt: new Date().toISOString(),
           status: 'sent',
           automatic: true,
@@ -631,13 +632,14 @@ const PipelineBoard = ({
       const stageConfig = stages.find(s => s.id === newStage);
       if (stageConfig) {
         // CRITICAL: Only send automatic messages if templates are configured and not empty
+        // Send messages EXACTLY as configured by the user, without any modifications
         if (stageConfig.emailTemplate && stageConfig.emailTemplate.trim() !== '') {
-          console.log(`Sending automatic email for stage ${stageConfig.name}`);
+          console.log(`Sending automatic email for stage ${stageConfig.name} with EXACT user template`);
           await sendAutomaticMessage(
             startup,
             stageConfig,
             'email',
-            stageConfig.emailTemplate,
+            stageConfig.emailTemplate, // Use EXACT template as configured by user
             stageConfig.emailSubject || `${senderCompany} - ${stageConfig.name}`,
             senderName,
             senderCompany
@@ -647,12 +649,12 @@ const PipelineBoard = ({
         }
 
         if (stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim() !== '') {
-          console.log(`Sending automatic WhatsApp for stage ${stageConfig.name}`);
+          console.log(`Sending automatic WhatsApp for stage ${stageConfig.name} with EXACT user template`);
           await sendAutomaticMessage(
             startup,
             stageConfig,
             'whatsapp',
-            stageConfig.whatsappTemplate,
+            stageConfig.whatsappTemplate, // Use EXACT template as configured by user
             '',
             senderName,
             senderCompany

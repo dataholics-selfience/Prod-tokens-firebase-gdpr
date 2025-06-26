@@ -416,7 +416,8 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
 
   return (
     <div className="flex flex-col h-screen bg-black overflow-hidden w-full">
-      <div className="flex flex-col p-3 border-b border-border flex-shrink-0 w-full">
+      {/* Header - Fixed at top */}
+      <div className="flex flex-col p-3 border-b border-border flex-shrink-0 w-full bg-black">
         <div className="flex items-center justify-between w-full">
           <button 
             onClick={toggleSidebar}
@@ -491,7 +492,8 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar pb-20 md:pb-4 w-full">
+      {/* Messages Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar w-full">
         {visibleMessages.map((message) => (
           <div
             key={`${message.id}-${forceRender}`}
@@ -534,7 +536,8 @@ const ChatInterface = ({ messages, addMessage, toggleSidebar, isSidebarOpen, cur
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto border-t border-border p-4 bg-black flex-shrink-0 w-full">
+      {/* Input Area - Fixed at bottom */}
+      <div className="border-t border-border p-4 bg-black flex-shrink-0 w-full">
         <form onSubmit={handleSubmit} className="relative w-full max-w-none">
           <div className="relative" style={{ width: '95%', margin: '0 auto' }}>
             <textarea
