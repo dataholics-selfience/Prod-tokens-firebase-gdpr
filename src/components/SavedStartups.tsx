@@ -175,6 +175,7 @@ const sendAutomaticMessage = async (
   stage: PipelineStage,
   messageType: 'email' | 'whatsapp',
   template: string,
+  subject: string,
   senderName: string,
   senderCompany: string
 ) => {
@@ -188,6 +189,12 @@ const sendAutomaticMessage = async (
 
   // Replace template variables
   let processedMessage = template
+    .replace(/{{startupName}}/g, startup.startupName)
+    .replace(/{{senderName}}/g, senderName)
+    .replace(/{{senderCompany}}/g, senderCompany)
+    .replace(/{{recipientName}}/g, recipientName);
+
+  let processedSubject = subject
     .replace(/{{startupName}}/g, startup.startupName)
     .replace(/{{senderName}}/g, senderName)
     .replace(/{{senderCompany}}/g, senderCompany)
@@ -243,7 +250,7 @@ const sendAutomaticMessage = async (
           email: 'contact@genoi.com.br', 
           name: 'Gen.OI - Inovação Aberta' 
         },
-        subject: `${senderCompany} - ${stage.name}`,
+        subject: processedSubject,
         html: emailHtml,
         text: processedMessage,
         reply_to: { 
@@ -271,7 +278,7 @@ const sendAutomaticMessage = async (
         recipientEmail,
         recipientType: contact?.type || 'startup',
         messageType: 'email',
-        subject: `${senderCompany} - ${stage.name}`,
+        subject: processedSubject,
         message: processedMessage,
         sentAt: new Date().toISOString(),
         status: 'sent',
@@ -475,20 +482,12 @@ const PipelineStage = ({
           : 'border-gray-600 bg-gray-800/50'
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className={`font-bold text-lg px-3 py-1 rounded-full border ${stage.color} flex items-center gap-2`}>
-          {stage.name}
-          <span className="text-sm font-normal">({startups.length})</span>
-        </h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onCustomizeMessage(stage)}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
-            title="Personalizar mensagem"
-          >
-            <Edit size={12} />
-            Personalizar
-          </button>
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center justify-between">
+          <h3 className={`font-bold text-lg px-3 py-1 rounded-full border ${stage.color} flex items-center gap-2`}>
+            {stage.name}
+            <span className="text-sm font-normal">({startups.length})</span>
+          </h3>
           {canDeleteStage && (
             <button
               onClick={handleDeleteStage}
@@ -497,6 +496,30 @@ const PipelineStage = ({
               <Trash2 size={14} />
             </button>
           )}
+        </div>
+        
+        {/* Desktop: Show button below stage name */}
+        <div className="hidden lg:block">
+          <button
+            onClick={() => onCustomizeMessage(stage)}
+            className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+            title="Personalizar mensagem automática"
+          >
+            <Edit size={12} />
+            Personalizar mensagem
+          </button>
+        </div>
+        
+        {/* Mobile: Show button inline with stage name */}
+        <div className="lg:hidden flex justify-end">
+          <button
+            onClick={() => onCustomizeMessage(stage)}
+            className="flex items-center gap-1 px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
+            title="Personalizar mensagem"
+          >
+            <Edit size={10} />
+            Personalizar mensagem
+          </button>
         </div>
       </div>
       
@@ -584,25 +607,27 @@ const PipelineBoard = ({
 
       // Find the new stage configuration
       const stageConfig = stages.find(s => s.id === newStage);
-      if (stageConfig && (stageConfig.emailTemplate || stageConfig.whatsappTemplate)) {
+      if (stageConfig) {
         // Send automatic messages if templates are configured
-        if (stageConfig.emailTemplate) {
+        if (stageConfig.emailTemplate && stageConfig.emailTemplate.trim()) {
           await sendAutomaticMessage(
             startup,
             stageConfig,
             'email',
             stageConfig.emailTemplate,
+            stageConfig.emailSubject || `${senderCompany} - ${stageConfig.name}`,
             senderName,
             senderCompany
           );
         }
 
-        if (stageConfig.whatsappTemplate) {
+        if (stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim()) {
           await sendAutomaticMessage(
             startup,
             stageConfig,
             'whatsapp',
             stageConfig.whatsappTemplate,
+            '',
             senderName,
             senderCompany
           );
