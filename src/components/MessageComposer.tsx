@@ -165,16 +165,8 @@ const MessageComposer = () => {
   }, [messageType, startupData, senderCompany]);
 
   const formatPhoneForEvolution = (phone: string): string => {
+    // Only clean the phone number, don't add any prefix
     const cleanPhone = phone.replace(/\D/g, '');
-    
-    if (cleanPhone.startsWith('55')) {
-      return cleanPhone;
-    } else if (cleanPhone.length === 11) {
-      return '55' + cleanPhone;
-    } else if (cleanPhone.length === 10) {
-      return '55' + cleanPhone;
-    }
-    
     return cleanPhone;
   };
 
