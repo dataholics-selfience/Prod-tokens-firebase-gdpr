@@ -18,6 +18,7 @@ import {
 import { db, auth } from '../firebase';
 import { useTranslation } from '../utils/i18n';
 import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
+import { sendWhatsAppMessage } from '../utils/whatsappInstanceManager';
 
 interface Contact {
   id: string;
@@ -45,11 +46,6 @@ interface StartupData {
     };
   };
 }
-
-const EVOLUTION_API_CONFIG = {
-  baseUrl: 'https://evolution-api-production-f719.up.railway.app',
-  instanceKey: '215D70C6CC83-4EE4-B55A-DE7D4146CBF1'
-};
 
 const MessageComposer = () => {
   const { t } = useTranslation();
@@ -284,45 +280,32 @@ const MessageComposer = () => {
       let success = false;
       let errorMessage = '';
       let finalMessage = message.trim();
+      let instanceUsed = '';
 
       if (messageType === 'whatsapp') {
         // Add footer to WhatsApp message
         finalMessage += `\n\nMensagem enviada pela genoi.net pelo cliente ${senderCompany} para a ${startupData.startupName}`;
         
-        // Send via Evolution API - use the validated phone number
+        // Send via Evolution API with instance management
         const validation = validateAndFormatPhone(selectedPhone!);
         const formattedPhone = validation.formattedNumber!;
         
-        const evolutionPayload = {
-          number: formattedPhone,
-          text: finalMessage
-        };
-
-        console.log('Sending WhatsApp message via Evolution API:', {
-          url: `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
-          payload: evolutionPayload
-        });
-
-        const evolutionResponse = await fetch(
-          `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': EVOLUTION_API_CONFIG.instanceKey
-            },
-            body: JSON.stringify(evolutionPayload)
-          }
+        console.log(`🚀 Enviando WhatsApp para startup ${startupData.id} via sistema de instâncias`);
+        
+        const whatsappResult = await sendWhatsAppMessage(
+          startupData.id,
+          auth.currentUser.uid,
+          formattedPhone,
+          finalMessage
         );
 
-        if (evolutionResponse.ok) {
-          const responseData = await evolutionResponse.json();
-          console.log('Evolution API response:', responseData);
+        if (whatsappResult.success) {
           success = true;
+          instanceUsed = whatsappResult.instanceUsed || '';
+          console.log(`✅ WhatsApp enviado com sucesso via instância: ${instanceUsed}`);
         } else {
-          const errorText = await evolutionResponse.text();
-          console.error('Evolution API error:', errorText);
-          errorMessage = `Erro na Evolution API: ${evolutionResponse.status} - ${errorText}`;
+          errorMessage = whatsappResult.error || 'Falha no envio do WhatsApp';
+          console.error(`❌ Falha no envio do WhatsApp:`, whatsappResult.error);
         }
       } else {
         // Send email via MailerSend Firebase Extension
@@ -347,7 +330,7 @@ const MessageComposer = () => {
                 <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
                 <div style="font-size: 14px; color: #666;">
                   <p><strong>Atenciosamente,</strong><br>
-                  Genie, sua agente IA para inovação aberta.</p>
+                  ${senderName}, ${senderCompany}</p>
                   <p style="margin-top: 20px;">
                     <strong>Gen.OI</strong><br>
                     Conectando empresas às melhores startups do mundo<br>
@@ -415,6 +398,9 @@ const MessageComposer = () => {
         if (messageType === 'whatsapp' && selectedPhone) {
           const validation = validateAndFormatPhone(selectedPhone);
           messageData.recipientPhone = validation.formattedNumber!;
+          if (instanceUsed) {
+            messageData.whatsappInstance = instanceUsed;
+          }
         }
         if (messageType === 'email' && subject.trim()) {
           messageData.subject = subject.trim();
@@ -422,9 +408,13 @@ const MessageComposer = () => {
 
         await addDoc(collection(db, 'crmMessages'), messageData);
 
+        const successMessage = messageType === 'email' 
+          ? t.emailSentSuccess 
+          : `${t.whatsAppSentSuccess}${instanceUsed ? ` (Instância: ${instanceUsed})` : ''}`;
+
         setStatus({ 
           type: 'success', 
-          message: messageType === 'email' ? t.emailSentSuccess : t.whatsAppSentSuccess
+          message: successMessage
         });
 
         // Navigate back to timeline immediately
