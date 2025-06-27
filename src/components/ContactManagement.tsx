@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useTranslation } from '../utils/i18n';
+import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
 
 interface Contact {
   id: string;
@@ -56,6 +57,7 @@ const ContactManagement = () => {
     type: 'startup'
   });
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [phoneErrors, setPhoneErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,36 +126,26 @@ const ContactManagement = () => {
     fetchData();
   }, [startupId, navigate]);
 
-  const formatPhoneForEvolution = (phone: string): string => {
-    const cleanPhone = phone.replace(/\D/g, '');
+  const validatePhoneNumber = (phone: string, index: number, isEditing: boolean = false): string | null => {
+    if (!phone.trim()) return null;
     
-    if (cleanPhone.startsWith('55')) {
-      return cleanPhone;
-    } else if (cleanPhone.length === 11) {
-      return '55' + cleanPhone;
-    } else if (cleanPhone.length === 10) {
-      return '55' + cleanPhone;
+    const validation = validateAndFormatPhone(phone);
+    const errorKey = isEditing ? `edit-${index}` : `new-${index}`;
+    
+    if (!validation.isValid) {
+      setPhoneErrors(prev => ({
+        ...prev,
+        [errorKey]: validation.error || 'Número inválido'
+      }));
+      return null;
+    } else {
+      setPhoneErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
+      return validation.formattedNumber!;
     }
-    
-    return cleanPhone;
-  };
-
-  const formatPhoneDisplay = (phone: string): string => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    
-    if (cleanPhone.length === 13 && cleanPhone.startsWith('55')) {
-      const areaCode = cleanPhone.substring(2, 4);
-      const firstPart = cleanPhone.substring(4, 9);
-      const secondPart = cleanPhone.substring(9);
-      return `+55 ${areaCode} ${firstPart}-${secondPart}`;
-    } else if (cleanPhone.length === 11) {
-      const areaCode = cleanPhone.substring(0, 2);
-      const firstPart = cleanPhone.substring(2, 7);
-      const secondPart = cleanPhone.substring(7);
-      return `${areaCode} ${firstPart}-${secondPart}`;
-    }
-    
-    return phone;
   };
 
   const handleAddEmail = (contactData: Partial<Contact>, setContactData: (data: Partial<Contact>) => void) => {
@@ -177,18 +169,72 @@ const ContactManagement = () => {
     const phones = contactData.phones || [];
     if (phones.length > 1) {
       setContactData({ ...contactData, phones: phones.filter((_, i) => i !== index) });
+      // Remove error for this phone
+      const errorKey = `new-${index}`;
+      setPhoneErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
+    }
+  };
+
+  const handlePhoneChange = (
+    index: number, 
+    value: string, 
+    contactData: Partial<Contact>, 
+    setContactData: (data: Partial<Contact>) => void,
+    isEditing: boolean = false
+  ) => {
+    const phones = [...(contactData.phones || [''])];
+    phones[index] = value;
+    setContactData({ ...contactData, phones });
+    
+    // Validate phone number
+    if (value.trim()) {
+      validatePhoneNumber(value, index, isEditing);
+    } else {
+      const errorKey = isEditing ? `edit-${index}` : `new-${index}`;
+      setPhoneErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
     }
   };
 
   const handleAddContact = async () => {
     if (!newContact.name || !startupData || !startupId) return;
 
+    // Validate all phone numbers
+    const validatedPhones: string[] = [];
+    let hasPhoneErrors = false;
+
+    if (newContact.phones) {
+      for (let i = 0; i < newContact.phones.length; i++) {
+        const phone = newContact.phones[i];
+        if (phone.trim()) {
+          const validatedPhone = validatePhoneNumber(phone, i, false);
+          if (validatedPhone) {
+            validatedPhones.push(validatedPhone);
+          } else {
+            hasPhoneErrors = true;
+          }
+        }
+      }
+    }
+
+    if (hasPhoneErrors) {
+      setStatus({ type: 'error', message: 'Corrija os erros nos números de telefone antes de salvar.' });
+      return;
+    }
+
     // Build contact object with only defined values
     const contactToAdd: Contact = {
       id: Date.now().toString(),
       name: newContact.name,
       emails: (newContact.emails || []).filter(email => email.trim() !== ''),
-      phones: (newContact.phones || []).filter(phone => phone.trim() !== '').map(formatPhoneForEvolution),
+      phones: validatedPhones,
       type: newContact.type || 'startup'
     };
 
@@ -221,6 +267,7 @@ const ContactManagement = () => {
         type: 'startup' 
       });
       setShowAddContact(false);
+      setPhoneErrors({});
       setStatus({ type: 'success', message: t.contactAddedSuccess });
     } catch (error) {
       console.error('Error adding contact:', error);
@@ -231,12 +278,35 @@ const ContactManagement = () => {
   const handleEditContact = async () => {
     if (!editingContact || !startupData || !startupId) return;
 
+    // Validate all phone numbers
+    const validatedPhones: string[] = [];
+    let hasPhoneErrors = false;
+
+    if (editingContact.phones) {
+      for (let i = 0; i < editingContact.phones.length; i++) {
+        const phone = editingContact.phones[i];
+        if (phone.trim()) {
+          const validatedPhone = validatePhoneNumber(phone, i, true);
+          if (validatedPhone) {
+            validatedPhones.push(validatedPhone);
+          } else {
+            hasPhoneErrors = true;
+          }
+        }
+      }
+    }
+
+    if (hasPhoneErrors) {
+      setStatus({ type: 'error', message: 'Corrija os erros nos números de telefone antes de salvar.' });
+      return;
+    }
+
     try {
       // Build updated contact object with only defined values
       const updatedContact: Contact = {
         ...editingContact,
         emails: (editingContact.emails || []).filter(email => email.trim() !== ''),
-        phones: (editingContact.phones || []).filter(phone => phone.trim() !== '').map(formatPhoneForEvolution)
+        phones: validatedPhones
       };
 
       // Only include optional fields if they have values
@@ -271,6 +341,7 @@ const ContactManagement = () => {
       ));
       
       setEditingContact(null);
+      setPhoneErrors({});
       setStatus({ type: 'success', message: t.contactUpdatedSuccess });
     } catch (error) {
       console.error('Error updating contact:', error);
@@ -417,27 +488,37 @@ const ContactManagement = () => {
 
             {/* Multiple Phones */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-2">{t.phones}</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                {t.phones}
+                <span className="text-xs text-gray-400 block mt-1">
+                  Exemplos: 5511995736666 (Brasil), 41765099123 (Suíça), 12345678901 (EUA)
+                </span>
+              </label>
               {(newContact.phones || ['']).map((phone, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <input
-                    type="tel"
-                    placeholder="Telefone/WhatsApp"
-                    value={phone}
-                    onChange={(e) => {
-                      const phones = [...(newContact.phones || [''])];
-                      phones[index] = e.target.value;
-                      setNewContact(prev => ({ ...prev, phones }));
-                    }}
-                    className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {(newContact.phones || []).length > 1 && (
-                    <button
-                      onClick={() => handleRemovePhone(index, newContact, setNewContact)}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
+                <div key={index} className="mb-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      placeholder="Telefone/WhatsApp (com código do país)"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(index, e.target.value, newContact, setNewContact, false)}
+                      className={`flex-1 px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 ${
+                        phoneErrors[`new-${index}`] 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-gray-600 focus:ring-blue-500'
+                      }`}
+                    />
+                    {(newContact.phones || []).length > 1 && (
+                      <button
+                        onClick={() => handleRemovePhone(index, newContact, setNewContact)}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  {phoneErrors[`new-${index}`] && (
+                    <p className="text-red-400 text-xs mt-1">{phoneErrors[`new-${index}`]}</p>
                   )}
                 </div>
               ))}
@@ -478,7 +559,7 @@ const ContactManagement = () => {
               <div className="flex gap-2">
                 <button
                   onClick={handleAddContact}
-                  disabled={!newContact.name}
+                  disabled={!newContact.name || Object.keys(phoneErrors).some(key => key.startsWith('new-'))}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
                 >
                   <Save size={16} />
@@ -496,6 +577,7 @@ const ContactManagement = () => {
                       role: '', 
                       type: 'startup' 
                     });
+                    setPhoneErrors({});
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                 >
@@ -565,27 +647,37 @@ const ContactManagement = () => {
 
                   {/* Multiple Phones in Edit */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">{t.phones}</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      {t.phones}
+                      <span className="text-xs text-gray-400 block mt-1">
+                        Exemplos: 5511995736666 (Brasil), 41765099123 (Suíça)
+                      </span>
+                    </label>
                     {(editingContact.phones || ['']).map((phone, index) => (
-                      <div key={index} className="flex gap-2 mb-2">
-                        <input
-                          type="tel"
-                          placeholder="Telefone/WhatsApp"
-                          value={phone ? formatPhoneDisplay(phone) : ''}
-                          onChange={(e) => {
-                            const phones = [...(editingContact.phones || [''])];
-                            phones[index] = e.target.value;
-                            setEditingContact(prev => prev ? { ...prev, phones } : null);
-                          }}
-                          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {(editingContact.phones || []).length > 1 && (
-                          <button
-                            onClick={() => handleRemovePhone(index, editingContact, (data) => setEditingContact(data as Contact))}
-                            className="px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
+                      <div key={index} className="mb-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="tel"
+                            placeholder="Telefone/WhatsApp (com código do país)"
+                            value={phone}
+                            onChange={(e) => handlePhoneChange(index, e.target.value, editingContact, (data) => setEditingContact(data as Contact), true)}
+                            className={`flex-1 px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 ${
+                              phoneErrors[`edit-${index}`] 
+                                ? 'border-red-500 focus:ring-red-500' 
+                                : 'border-gray-600 focus:ring-blue-500'
+                            }`}
+                          />
+                          {(editingContact.phones || []).length > 1 && (
+                            <button
+                              onClick={() => handleRemovePhone(index, editingContact, (data) => setEditingContact(data as Contact))}
+                              className="px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                        {phoneErrors[`edit-${index}`] && (
+                          <p className="text-red-400 text-xs mt-1">{phoneErrors[`edit-${index}`]}</p>
                         )}
                       </div>
                     ))}
@@ -622,13 +714,17 @@ const ContactManagement = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={handleEditContact}
-                      className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      disabled={Object.keys(phoneErrors).some(key => key.startsWith('edit-'))}
+                      className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
                     >
                       <Save size={16} />
                       {t.save}
                     </button>
                     <button
-                      onClick={() => setEditingContact(null)}
+                      onClick={() => {
+                        setEditingContact(null);
+                        setPhoneErrors({});
+                      }}
                       className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                     >
                       <X size={16} />

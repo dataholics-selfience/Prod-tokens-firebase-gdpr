@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useTranslation } from '../utils/i18n';
+import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
 
 interface Contact {
   id: string;
@@ -64,6 +65,7 @@ const MessageComposer = () => {
   const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [showPhoneInput, setShowPhoneInput] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -164,35 +166,6 @@ const MessageComposer = () => {
     }
   }, [messageType, startupData, senderCompany]);
 
-  const formatPhoneForEvolution = (phone: string): string => {
-    // Only clean the phone number, don't add any prefix
-    const cleanPhone = phone.replace(/\D/g, '');
-    return cleanPhone;
-  };
-
-  const formatPhoneDisplay = (phone: string): string => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    
-    if (cleanPhone.length === 13 && cleanPhone.startsWith('55')) {
-      const areaCode = cleanPhone.substring(2, 4);
-      const firstPart = cleanPhone.substring(4, 9);
-      const secondPart = cleanPhone.substring(9);
-      return `+55 ${areaCode} ${firstPart}-${secondPart}`;
-    } else if (cleanPhone.length === 11) {
-      const areaCode = cleanPhone.substring(0, 2);
-      const firstPart = cleanPhone.substring(2, 7);
-      const secondPart = cleanPhone.substring(7);
-      return `${areaCode} ${firstPart}-${secondPart}`;
-    }
-    
-    return phone;
-  };
-
-  const validatePhoneNumber = (phone: string): boolean => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    return cleanPhone.length >= 10 && cleanPhone.length <= 13;
-  };
-
   const handleContactSelect = (contact: Contact) => {
     setSelectedContact(contact);
     setSelectedEmailIndex(0);
@@ -207,16 +180,36 @@ const MessageComposer = () => {
     }
   };
 
+  const handlePhoneNumberChange = (value: string) => {
+    setNewPhoneNumber(value);
+    
+    if (value.trim()) {
+      const validation = validateAndFormatPhone(value);
+      if (!validation.isValid) {
+        setPhoneError(validation.error || 'Número inválido');
+      } else {
+        setPhoneError('');
+      }
+    } else {
+      setPhoneError('');
+    }
+  };
+
   const handleAddPhoneNumber = async () => {
     if (!selectedContact || !newPhoneNumber.trim() || !startupData) return;
 
-    const formattedPhone = formatPhoneForEvolution(newPhoneNumber);
+    const validation = validateAndFormatPhone(newPhoneNumber);
     
+    if (!validation.isValid) {
+      setPhoneError(validation.error || 'Número inválido');
+      return;
+    }
+
     try {
       // Update the contact with the new phone number
       const updatedContact = { 
         ...selectedContact, 
-        phones: [...(selectedContact.phones || []), formattedPhone]
+        phones: [...(selectedContact.phones || []), validation.formattedNumber!]
       };
       
       if (selectedContact.id.startsWith('startup-')) {
@@ -245,6 +238,7 @@ const MessageComposer = () => {
         contact.id === selectedContact.id ? updatedContact : contact
       ));
       setNewPhoneNumber('');
+      setPhoneError('');
       setShowPhoneInput(false);
       setStatus({ type: 'success', message: t.whatsAppNumberAddedSuccess });
     } catch (error) {
@@ -269,9 +263,18 @@ const MessageComposer = () => {
       return;
     }
 
-    if (messageType === 'whatsapp' && (!selectedPhone || !validatePhoneNumber(selectedPhone))) {
+    if (messageType === 'whatsapp' && !selectedPhone) {
       setStatus({ type: 'error', message: t.invalidPhoneNumber });
       return;
+    }
+
+    // Validate WhatsApp number
+    if (messageType === 'whatsapp' && selectedPhone) {
+      const validation = validateAndFormatPhone(selectedPhone);
+      if (!validation.isValid) {
+        setStatus({ type: 'error', message: `Número de WhatsApp inválido: ${validation.error}` });
+        return;
+      }
     }
 
     setIsSending(true);
@@ -286,8 +289,9 @@ const MessageComposer = () => {
         // Add footer to WhatsApp message
         finalMessage += `\n\nMensagem enviada pela genoi.net pelo cliente ${senderCompany} para a ${startupData.startupName}`;
         
-        // Send via Evolution API
-        const formattedPhone = formatPhoneForEvolution(selectedPhone!);
+        // Send via Evolution API - use the validated phone number
+        const validation = validateAndFormatPhone(selectedPhone!);
+        const formattedPhone = validation.formattedNumber!;
         
         const evolutionPayload = {
           number: formattedPhone,
@@ -409,7 +413,8 @@ const MessageComposer = () => {
           messageData.recipientEmail = selectedEmail;
         }
         if (messageType === 'whatsapp' && selectedPhone) {
-          messageData.recipientPhone = formatPhoneForEvolution(selectedPhone);
+          const validation = validateAndFormatPhone(selectedPhone);
+          messageData.recipientPhone = validation.formattedNumber!;
         }
         if (messageType === 'email' && subject.trim()) {
           messageData.subject = subject.trim();
@@ -666,18 +671,34 @@ const MessageComposer = () => {
           {showPhoneInput && (
             <div className="mb-6 bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
               <h4 className="text-yellow-400 font-medium mb-3">{t.addWhatsAppNumber}</h4>
+              <p className="text-sm text-gray-300 mb-3">
+                Exemplos de números válidos:
+                <br />• Brasil: 5511995736666
+                <br />• Suíça: 41765099123
+                <br />• EUA: 12345678901
+                <br />• Reino Unido: 447700900123
+              </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="tel"
-                  value={newPhoneNumber}
-                  onChange={(e) => setNewPhoneNumber(e.target.value)}
-                  placeholder="Digite o número do WhatsApp"
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="flex-1">
+                  <input
+                    type="tel"
+                    value={newPhoneNumber}
+                    onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                    placeholder="Digite o número com código do país"
+                    className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 ${
+                      phoneError 
+                        ? 'border-red-500 focus:ring-red-500' 
+                        : 'border-gray-600 focus:ring-blue-500'
+                    }`}
+                  />
+                  {phoneError && (
+                    <p className="text-red-400 text-xs mt-1">{phoneError}</p>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleAddPhoneNumber}
-                    disabled={!newPhoneNumber.trim()}
+                    disabled={!newPhoneNumber.trim() || !!phoneError}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-md transition-colors"
                   >
                     {t.add}
@@ -686,6 +707,7 @@ const MessageComposer = () => {
                     onClick={() => {
                       setShowPhoneInput(false);
                       setNewPhoneNumber('');
+                      setPhoneError('');
                     }}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors"
                   >

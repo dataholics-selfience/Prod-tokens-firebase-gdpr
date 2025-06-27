@@ -12,6 +12,7 @@ import { StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PipelineStageManager from './PipelineStageManager';
+import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
 
 interface SavedStartupType {
   id: string;
@@ -428,6 +429,13 @@ const sendWhatsAppToContact = async (
   senderCompany: string
 ) => {
   try {
+    // Validar número de telefone antes de enviar
+    const validation = validateAndFormatPhone(phone);
+    if (!validation.isValid) {
+      console.error(`❌ NÚMERO INVÁLIDO: ${phone} - ${validation.error}`);
+      return { success: false, reason: 'invalid_phone', error: validation.error };
+    }
+
     // Processar template com variáveis
     let processedMessage = stage.whatsappTemplate!
       .replace(/\{\{startupName\}\}/g, startup.startupName)
@@ -435,14 +443,8 @@ const sendWhatsAppToContact = async (
       .replace(/\{\{senderCompany\}\}/g, senderCompany)
       .replace(/\{\{recipientName\}\}/g, contact.name);
 
-    // Formatar telefone para Evolution API - apenas limpar, sem adicionar prefixo
-    const formatPhoneForEvolution = (phone: string): string => {
-      // Only clean the phone number, don't add any prefix
-      const cleanPhone = phone.replace(/\D/g, '');
-      return cleanPhone;
-    };
-
-    const formattedPhone = formatPhoneForEvolution(phone);
+    // Usar o número validado e formatado
+    const formattedPhone = validation.formattedNumber!;
     
     // Adicionar footer ao WhatsApp
     const finalWhatsAppMessage = processedMessage + `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
