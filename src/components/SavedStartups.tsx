@@ -170,7 +170,8 @@ const SocialLinks = ({ startup, className = "" }: { startup: StartupType; classN
   );
 };
 
-const sendAutomaticMessage = async (
+// FUNÇÃO CRÍTICA: SEMPRE ENVIAR MENSAGENS CONFIGURADAS PELO USUÁRIO
+const sendConfiguredMessage = async (
   startup: SavedStartupType, 
   stage: PipelineStage,
   messageType: 'email' | 'whatsapp',
@@ -179,10 +180,18 @@ const sendAutomaticMessage = async (
   senderName: string,
   senderCompany: string
 ) => {
-  // CRITICAL: Only send message if template is configured and not empty
+  console.log(`🚀 INICIANDO ENVIO DE MENSAGEM CONFIGURADA:`, {
+    startup: startup.startupName,
+    stage: stage.name,
+    messageType,
+    hasTemplate: !!template && template.trim() !== '',
+    templateLength: template?.length || 0
+  });
+
+  // CRÍTICO: SEMPRE TENTAR ENVIAR SE HOUVER TEMPLATE CONFIGURADO
   if (!template || template.trim() === '') {
-    console.log(`No ${messageType} template configured for stage ${stage.name}, skipping automatic message`);
-    return;
+    console.log(`❌ TEMPLATE VAZIO PARA ${messageType.toUpperCase()} NO ESTÁGIO ${stage.name} - PULANDO ENVIO`);
+    return { success: false, reason: 'template_empty' };
   }
 
   // Get the first contact or use startup data
@@ -191,16 +200,27 @@ const sendAutomaticMessage = async (
   const recipientEmail = contact?.emails?.[0] || startup.startupData.email;
   const recipientPhone = contact?.phones?.[0];
 
-  // For email, also check if we have a valid recipient email
-  if (messageType === 'email' && (!recipientEmail || recipientEmail.trim() === '')) {
-    console.log(`No recipient email available for startup ${startup.startupName}, skipping automatic email`);
-    return;
+  console.log(`📋 DADOS DO DESTINATÁRIO:`, {
+    recipientName,
+    recipientEmail,
+    recipientPhone,
+    messageType
+  });
+
+  // For email, check if we have a valid recipient email
+  if (messageType === 'email') {
+    if (!recipientEmail || recipientEmail.trim() === '') {
+      console.log(`❌ EMAIL DO DESTINATÁRIO VAZIO - PULANDO ENVIO DE EMAIL`);
+      return { success: false, reason: 'no_email' };
+    }
   }
 
   // For WhatsApp, check if we have a valid recipient phone
-  if (messageType === 'whatsapp' && (!recipientPhone || recipientPhone.trim() === '')) {
-    console.log(`No recipient phone available for startup ${startup.startupName}, skipping automatic WhatsApp`);
-    return;
+  if (messageType === 'whatsapp') {
+    if (!recipientPhone || recipientPhone.trim() === '') {
+      console.log(`❌ TELEFONE DO DESTINATÁRIO VAZIO - PULANDO ENVIO DE WHATSAPP`);
+      return { success: false, reason: 'no_phone' };
+    }
   }
 
   // Replace template variables with user data
@@ -216,8 +236,16 @@ const sendAutomaticMessage = async (
     .replace(/\{\{senderCompany\}\}/g, senderCompany)
     .replace(/\{\{recipientName\}\}/g, recipientName);
 
+  console.log(`📝 MENSAGEM PROCESSADA:`, {
+    originalTemplate: template.substring(0, 100) + '...',
+    processedMessage: processedMessage.substring(0, 100) + '...',
+    processedSubject
+  });
+
   try {
     if (messageType === 'email' && recipientEmail) {
+      console.log(`📧 ENVIANDO EMAIL PARA: ${recipientEmail}`);
+      
       // Send email via MailerSend Firebase Extension
       const emailHtml = `
         <!DOCTYPE html>
@@ -302,9 +330,12 @@ const sendAutomaticMessage = async (
         stageId: stage.id
       });
 
-      console.log(`Automatic email sent for startup ${startup.startupName} moving to stage ${stage.name}`);
+      console.log(`✅ EMAIL ENVIADO COM SUCESSO para ${startup.startupName} no estágio ${stage.name}`);
+      return { success: true, type: 'email' };
 
     } else if (messageType === 'whatsapp' && recipientPhone) {
+      console.log(`📱 ENVIANDO WHATSAPP PARA: ${recipientPhone}`);
+      
       // Format phone for Evolution API
       const formatPhoneForEvolution = (phone: string): string => {
         const cleanPhone = phone.replace(/\D/g, '');
@@ -329,6 +360,8 @@ const sendAutomaticMessage = async (
         number: formattedPhone,
         text: finalWhatsAppMessage
       };
+
+      console.log(`📱 PAYLOAD WHATSAPP:`, evolutionPayload);
 
       const evolutionResponse = await fetch(
         `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
@@ -359,14 +392,20 @@ const sendAutomaticMessage = async (
           stageId: stage.id
         });
 
-        console.log(`Automatic WhatsApp sent for startup ${startup.startupName} moving to stage ${stage.name}`);
+        console.log(`✅ WHATSAPP ENVIADO COM SUCESSO para ${startup.startupName} no estágio ${stage.name}`);
+        return { success: true, type: 'whatsapp' };
       } else {
-        console.error(`Failed to send automatic WhatsApp for startup ${startup.startupName}:`, await evolutionResponse.text());
+        const errorText = await evolutionResponse.text();
+        console.error(`❌ FALHA NO ENVIO DE WHATSAPP para ${startup.startupName}:`, errorText);
+        return { success: false, reason: 'api_error', error: errorText };
       }
     }
   } catch (error) {
-    console.error(`Error sending automatic ${messageType} message for startup ${startup.startupName}:`, error);
+    console.error(`❌ ERRO NO ENVIO DE ${messageType.toUpperCase()} para ${startup.startupName}:`, error);
+    return { success: false, reason: 'exception', error: error.message };
   }
+
+  return { success: false, reason: 'unknown' };
 };
 
 const DraggableStartupCard = ({ 
@@ -611,15 +650,32 @@ const PipelineBoard = ({
   onCustomizeMessage: (stage: PipelineStage) => void;
 }) => {
   const handleDrop = async (startupId: string, newStage: string) => {
+    console.log(`🎯 INICIANDO MUDANÇA DE ESTÁGIO:`, {
+      startupId,
+      newStage,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       const startup = startups.find(s => s.id === startupId);
-      if (!startup) return;
+      if (!startup) {
+        console.error(`❌ STARTUP NÃO ENCONTRADA: ${startupId}`);
+        return;
+      }
 
-      // Update startup stage in database
+      console.log(`📋 STARTUP ENCONTRADA:`, {
+        name: startup.startupName,
+        currentStage: startup.stage,
+        newStage
+      });
+
+      // Update startup stage in database FIRST
       await updateDoc(doc(db, 'selectedStartups', startupId), {
         stage: newStage,
         updatedAt: new Date().toISOString()
       });
+
+      console.log(`✅ ESTÁGIO ATUALIZADO NO BANCO DE DADOS`);
 
       // Get user data for automatic messages
       const userDoc = await getDoc(doc(db, 'users', startup.userId));
@@ -627,44 +683,70 @@ const PipelineBoard = ({
       const senderName = userData?.name || '';
       const senderCompany = userData?.company || '';
 
+      console.log(`👤 DADOS DO USUÁRIO:`, {
+        senderName,
+        senderCompany,
+        userId: startup.userId
+      });
+
       // Find the new stage configuration
       const stageConfig = stages.find(s => s.id === newStage);
-      if (stageConfig) {
-        // CRITICAL: Only send automatic messages if templates are configured and not empty
-        if (stageConfig.emailTemplate && stageConfig.emailTemplate.trim() !== '') {
-          console.log(`Sending automatic email for stage ${stageConfig.name} with user template`);
-          await sendAutomaticMessage(
-            startup,
-            stageConfig,
-            'email',
-            stageConfig.emailTemplate,
-            stageConfig.emailSubject || `${senderCompany} - ${stageConfig.name}`,
-            senderName,
-            senderCompany
-          );
-        } else {
-          console.log(`No email template configured for stage ${stageConfig.name}, skipping automatic email`);
-        }
-
-        if (stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim() !== '') {
-          console.log(`Sending automatic WhatsApp for stage ${stageConfig.name} with user template`);
-          await sendAutomaticMessage(
-            startup,
-            stageConfig,
-            'whatsapp',
-            stageConfig.whatsappTemplate,
-            '',
-            senderName,
-            senderCompany
-          );
-        } else {
-          console.log(`No WhatsApp template configured for stage ${stageConfig.name}, skipping automatic WhatsApp`);
-        }
+      if (!stageConfig) {
+        console.error(`❌ CONFIGURAÇÃO DO ESTÁGIO NÃO ENCONTRADA: ${newStage}`);
+        onStageChange(startupId, newStage);
+        return;
       }
 
+      console.log(`⚙️ CONFIGURAÇÃO DO ESTÁGIO ENCONTRADA:`, {
+        stageName: stageConfig.name,
+        hasEmailTemplate: !!(stageConfig.emailTemplate && stageConfig.emailTemplate.trim()),
+        hasWhatsAppTemplate: !!(stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim()),
+        emailTemplateLength: stageConfig.emailTemplate?.length || 0,
+        whatsappTemplateLength: stageConfig.whatsappTemplate?.length || 0
+      });
+
+      // CRÍTICO: SEMPRE TENTAR ENVIAR MENSAGENS CONFIGURADAS
+      const emailResult = await sendConfiguredMessage(
+        startup,
+        stageConfig,
+        'email',
+        stageConfig.emailTemplate || '',
+        stageConfig.emailSubject || `${senderCompany} - ${stageConfig.name}`,
+        senderName,
+        senderCompany
+      );
+
+      const whatsappResult = await sendConfiguredMessage(
+        startup,
+        stageConfig,
+        'whatsapp',
+        stageConfig.whatsappTemplate || '',
+        '',
+        senderName,
+        senderCompany
+      );
+
+      console.log(`📊 RESULTADO DOS ENVIOS:`, {
+        email: emailResult,
+        whatsapp: whatsappResult,
+        stageName: stageConfig.name,
+        startupName: startup.startupName
+      });
+
+      // Update UI
       onStageChange(startupId, newStage);
+
+      // Show success message if any message was sent
+      if (emailResult.success || whatsappResult.success) {
+        const sentTypes = [];
+        if (emailResult.success) sentTypes.push('Email');
+        if (whatsappResult.success) sentTypes.push('WhatsApp');
+        
+        console.log(`🎉 MENSAGENS ENVIADAS COM SUCESSO: ${sentTypes.join(' e ')} para ${startup.startupName} no estágio ${stageConfig.name}`);
+      }
+
     } catch (error) {
-      console.error('Error updating stage:', error);
+      console.error(`❌ ERRO GERAL NA MUDANÇA DE ESTÁGIO:`, error);
     }
   };
 
