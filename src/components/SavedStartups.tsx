@@ -170,242 +170,340 @@ const SocialLinks = ({ startup, className = "" }: { startup: StartupType; classN
   );
 };
 
-// FUNÇÃO CRÍTICA: SEMPRE ENVIAR MENSAGENS CONFIGURADAS PELO USUÁRIO
-const sendConfiguredMessage = async (
+// FUNÇÃO CRÍTICA: ENVIAR MENSAGENS PARA TODOS OS CONTATOS
+const sendMessagesToAllContacts = async (
   startup: SavedStartupType, 
   stage: PipelineStage,
-  messageType: 'email' | 'whatsapp',
-  template: string,
-  subject: string,
   senderName: string,
   senderCompany: string
 ) => {
-  console.log(`🚀 INICIANDO ENVIO DE MENSAGEM CONFIGURADA:`, {
+  console.log(`🚀 INICIANDO ENVIO PARA TODOS OS CONTATOS:`, {
     startup: startup.startupName,
     stage: stage.name,
-    messageType,
-    hasTemplate: !!template && template.trim() !== '',
-    templateLength: template?.length || 0
+    hasEmailTemplate: !!(stage.emailTemplate && stage.emailTemplate.trim()),
+    hasWhatsAppTemplate: !!(stage.whatsappTemplate && stage.whatsappTemplate.trim())
   });
 
-  // CRÍTICO: SEMPRE TENTAR ENVIAR SE HOUVER TEMPLATE CONFIGURADO
-  if (!template || template.trim() === '') {
-    console.log(`❌ TEMPLATE VAZIO PARA ${messageType.toUpperCase()} NO ESTÁGIO ${stage.name} - PULANDO ENVIO`);
-    return { success: false, reason: 'template_empty' };
+  // Coletar todos os contatos disponíveis
+  const allContacts = [];
+  
+  // 1. Contato principal da startup (email padrão)
+  if (startup.startupData.email) {
+    allContacts.push({
+      id: 'startup-main',
+      name: startup.startupData.name,
+      emails: [startup.startupData.email],
+      phones: [],
+      type: 'startup' as const
+    });
   }
 
-  // Get the first contact or use startup data
-  const contact = startup.startupData.contacts?.[0];
-  const recipientName = contact?.name || startup.startupData.name;
-  const recipientEmail = contact?.emails?.[0] || startup.startupData.email;
-  const recipientPhone = contact?.phones?.[0];
+  // 2. Contatos das redes sociais
+  if (startup.startupData.socialLinks?.linkedin) {
+    allContacts.push({
+      id: 'startup-linkedin',
+      name: `${startup.startupData.name} (LinkedIn)`,
+      emails: startup.startupData.email ? [startup.startupData.email] : [],
+      phones: [],
+      linkedin: startup.startupData.socialLinks.linkedin,
+      type: 'startup' as const,
+      role: 'LinkedIn Profile'
+    });
+  }
 
-  console.log(`📋 DADOS DO DESTINATÁRIO:`, {
-    recipientName,
-    recipientEmail,
-    recipientPhone,
-    messageType
+  if (startup.startupData.socialLinks?.instagram) {
+    allContacts.push({
+      id: 'startup-instagram',
+      name: `${startup.startupData.name} (Instagram)`,
+      emails: startup.startupData.email ? [startup.startupData.email] : [],
+      phones: [],
+      instagram: startup.startupData.socialLinks.instagram,
+      type: 'startup' as const,
+      role: 'Instagram Profile'
+    });
+  }
+
+  // 3. Contatos adicionais cadastrados pelo usuário
+  if (startup.startupData.contacts && startup.startupData.contacts.length > 0) {
+    allContacts.push(...startup.startupData.contacts);
+  }
+
+  console.log(`📋 TOTAL DE CONTATOS ENCONTRADOS: ${allContacts.length}`, {
+    contacts: allContacts.map(c => ({ name: c.name, emails: c.emails?.length || 0, phones: c.phones?.length || 0 }))
   });
 
-  // For email, check if we have a valid recipient email
-  if (messageType === 'email') {
-    if (!recipientEmail || recipientEmail.trim() === '') {
-      console.log(`❌ EMAIL DO DESTINATÁRIO VAZIO - PULANDO ENVIO DE EMAIL`);
-      return { success: false, reason: 'no_email' };
+  const results = {
+    emailsSent: 0,
+    whatsappsSent: 0,
+    emailsFailed: 0,
+    whatsappsFailed: 0,
+    totalContacts: allContacts.length
+  };
+
+  // Processar cada contato
+  for (const contact of allContacts) {
+    console.log(`📞 PROCESSANDO CONTATO: ${contact.name}`);
+
+    // ENVIAR EMAILS para todos os emails do contato
+    if (stage.emailTemplate && stage.emailTemplate.trim() && contact.emails && contact.emails.length > 0) {
+      for (const email of contact.emails) {
+        if (email && email.trim()) {
+          const emailResult = await sendEmailToContact(
+            startup,
+            stage,
+            contact,
+            email,
+            senderName,
+            senderCompany
+          );
+          
+          if (emailResult.success) {
+            results.emailsSent++;
+            console.log(`✅ EMAIL ENVIADO: ${email}`);
+          } else {
+            results.emailsFailed++;
+            console.log(`❌ FALHA NO EMAIL: ${email} - ${emailResult.reason}`);
+          }
+        }
+      }
+    }
+
+    // ENVIAR WHATSAPP para todos os telefones do contato
+    if (stage.whatsappTemplate && stage.whatsappTemplate.trim() && contact.phones && contact.phones.length > 0) {
+      for (const phone of contact.phones) {
+        if (phone && phone.trim()) {
+          const whatsappResult = await sendWhatsAppToContact(
+            startup,
+            stage,
+            contact,
+            phone,
+            senderName,
+            senderCompany
+          );
+          
+          if (whatsappResult.success) {
+            results.whatsappsSent++;
+            console.log(`✅ WHATSAPP ENVIADO: ${phone}`);
+          } else {
+            results.whatsappsFailed++;
+            console.log(`❌ FALHA NO WHATSAPP: ${phone} - ${whatsappResult.reason}`);
+          }
+        }
+      }
     }
   }
 
-  // For WhatsApp, check if we have a valid recipient phone
-  if (messageType === 'whatsapp') {
-    if (!recipientPhone || recipientPhone.trim() === '') {
-      console.log(`❌ TELEFONE DO DESTINATÁRIO VAZIO - PULANDO ENVIO DE WHATSAPP`);
-      return { success: false, reason: 'no_phone' };
-    }
-  }
+  console.log(`📊 RESULTADO FINAL DO ENVIO:`, results);
+  return results;
+};
 
-  // Replace template variables with user data
-  let processedMessage = template
-    .replace(/\{\{startupName\}\}/g, startup.startupName)
-    .replace(/\{\{senderName\}\}/g, senderName)
-    .replace(/\{\{senderCompany\}\}/g, senderCompany)
-    .replace(/\{\{recipientName\}\}/g, recipientName);
-
-  let processedSubject = subject
-    .replace(/\{\{startupName\}\}/g, startup.startupName)
-    .replace(/\{\{senderName\}\}/g, senderName)
-    .replace(/\{\{senderCompany\}\}/g, senderCompany)
-    .replace(/\{\{recipientName\}\}/g, recipientName);
-
-  console.log(`📝 MENSAGEM PROCESSADA:`, {
-    originalTemplate: template.substring(0, 100) + '...',
-    processedMessage: processedMessage.substring(0, 100) + '...',
-    processedSubject
-  });
-
+// Função para enviar email para um contato específico
+const sendEmailToContact = async (
+  startup: SavedStartupType,
+  stage: PipelineStage,
+  contact: any,
+  email: string,
+  senderName: string,
+  senderCompany: string
+) => {
   try {
-    if (messageType === 'email' && recipientEmail) {
-      console.log(`📧 ENVIANDO EMAIL PARA: ${recipientEmail}`);
-      
-      // Send email via MailerSend Firebase Extension
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Mensagem da Gen.OI</title>
-        </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <img src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" alt="Gen.OI" style="height: 60px; margin-bottom: 20px;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Gen.OI - Inovação Aberta</h1>
-          </div>
-          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <div style="white-space: pre-wrap; margin-bottom: 25px; font-size: 16px;">
-                ${processedMessage}
-              </div>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
-              <div style="font-size: 14px; color: #666;">
-                <p><strong>Atenciosamente,</strong><br>
-                ${senderName}, ${senderCompany}</p>
-                <p style="margin-top: 20px;">
-                  <strong>Gen.OI</strong><br>
-                  Conectando empresas às melhores startups do mundo<br>
-                  🌐 <a href="https://genoi.net" style="color: #667eea;">genoi.net</a><br>
-                  📧 <a href="mailto:contact@genoi.net" style="color: #667eea;">contact@genoi.net</a>
-                </p>
-              </div>
+    // Processar template com variáveis
+    let processedMessage = stage.emailTemplate!
+      .replace(/\{\{startupName\}\}/g, startup.startupName)
+      .replace(/\{\{senderName\}\}/g, senderName)
+      .replace(/\{\{senderCompany\}\}/g, senderCompany)
+      .replace(/\{\{recipientName\}\}/g, contact.name);
+
+    let processedSubject = (stage.emailSubject || `${senderCompany} - ${stage.name}`)
+      .replace(/\{\{startupName\}\}/g, startup.startupName)
+      .replace(/\{\{senderName\}\}/g, senderName)
+      .replace(/\{\{senderCompany\}\}/g, senderCompany)
+      .replace(/\{\{recipientName\}\}/g, contact.name);
+
+    // Criar HTML do email
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mensagem da Gen.OI</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <img src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" alt="Gen.OI" style="height: 60px; margin-bottom: 20px;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Gen.OI - Inovação Aberta</h1>
+        </div>
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="white-space: pre-wrap; margin-bottom: 25px; font-size: 16px;">
+              ${processedMessage}
+            </div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+            <div style="font-size: 14px; color: #666;">
+              <p><strong>Atenciosamente,</strong><br>
+              ${senderName}, ${senderCompany}</p>
+              <p style="margin-top: 20px;">
+                <strong>Gen.OI</strong><br>
+                Conectando empresas às melhores startups do mundo<br>
+                🌐 <a href="https://genoi.net" style="color: #667eea;">genoi.net</a><br>
+                📧 <a href="mailto:contact@genoi.net" style="color: #667eea;">contact@genoi.net</a>
+              </p>
             </div>
           </div>
-          <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
-            <p>Esta mensagem foi enviada automaticamente através da plataforma Gen.OI de inovação aberta.</p>
-          </div>
-        </body>
-        </html>
-      `;
+        </div>
+        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
+          <p>Esta mensagem foi enviada automaticamente através da plataforma Gen.OI de inovação aberta.</p>
+        </div>
+      </body>
+      </html>
+    `;
 
-      const emailPayload = {
-        to: [{ 
-          email: recipientEmail, 
-          name: recipientName 
-        }],
-        from: { 
-          email: 'contact@genoi.com.br', 
-          name: 'Gen.OI - Inovação Aberta' 
+    // Payload para MailerSend
+    const emailPayload = {
+      to: [{ 
+        email: email, 
+        name: contact.name 
+      }],
+      from: { 
+        email: 'contact@genoi.com.br', 
+        name: 'Gen.OI - Inovação Aberta' 
+      },
+      subject: processedSubject,
+      html: emailHtml,
+      text: processedMessage,
+      reply_to: { 
+        email: 'contact@genoi.net', 
+        name: 'Gen.OI - Suporte' 
+      },
+      tags: ['crm', 'automatic-message', stage.id, 'multi-contact'],
+      metadata: { 
+        startupId: startup.id, 
+        userId: startup.userId,
+        stageId: stage.id,
+        contactId: contact.id,
+        automatic: true,
+        multiContact: true,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    // Enviar via MailerSend Firebase Extension
+    await addDoc(collection(db, 'emails'), emailPayload);
+
+    // Salvar no CRM
+    await addDoc(collection(db, 'crmMessages'), {
+      startupId: startup.id,
+      userId: startup.userId,
+      senderName,
+      recipientName: contact.name,
+      recipientEmail: email,
+      recipientType: contact.type || 'startup',
+      messageType: 'email',
+      subject: processedSubject,
+      message: processedMessage,
+      sentAt: new Date().toISOString(),
+      status: 'sent',
+      automatic: true,
+      stageId: stage.id,
+      contactId: contact.id,
+      multiContact: true
+    });
+
+    return { success: true, type: 'email' };
+
+  } catch (error) {
+    console.error(`❌ ERRO NO ENVIO DE EMAIL para ${email}:`, error);
+    return { success: false, reason: 'exception', error: error.message };
+  }
+};
+
+// Função para enviar WhatsApp para um contato específico
+const sendWhatsAppToContact = async (
+  startup: SavedStartupType,
+  stage: PipelineStage,
+  contact: any,
+  phone: string,
+  senderName: string,
+  senderCompany: string
+) => {
+  try {
+    // Processar template com variáveis
+    let processedMessage = stage.whatsappTemplate!
+      .replace(/\{\{startupName\}\}/g, startup.startupName)
+      .replace(/\{\{senderName\}\}/g, senderName)
+      .replace(/\{\{senderCompany\}\}/g, senderCompany)
+      .replace(/\{\{recipientName\}\}/g, contact.name);
+
+    // Formatar telefone para Evolution API
+    const formatPhoneForEvolution = (phone: string): string => {
+      const cleanPhone = phone.replace(/\D/g, '');
+      
+      if (cleanPhone.startsWith('55')) {
+        return cleanPhone;
+      } else if (cleanPhone.length === 11) {
+        return '55' + cleanPhone;
+      } else if (cleanPhone.length === 10) {
+        return '55' + cleanPhone;
+      }
+      
+      return cleanPhone;
+    };
+
+    const formattedPhone = formatPhoneForEvolution(phone);
+    
+    // Adicionar footer ao WhatsApp
+    const finalWhatsAppMessage = processedMessage + `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
+    
+    // Payload para Evolution API
+    const evolutionPayload = {
+      number: formattedPhone,
+      text: finalWhatsAppMessage
+    };
+
+    // Enviar via Evolution API
+    const evolutionResponse = await fetch(
+      `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_CONFIG.instanceKey
         },
-        subject: processedSubject,
-        html: emailHtml,
-        text: processedMessage,
-        reply_to: { 
-          email: 'contact@genoi.net', 
-          name: 'Gen.OI - Suporte' 
-        },
-        tags: ['crm', 'automatic-message', stage.id],
-        metadata: { 
-          startupId: startup.id, 
-          userId: startup.userId,
-          stageId: stage.id,
-          automatic: true,
-          timestamp: new Date().toISOString()
-        }
-      };
+        body: JSON.stringify(evolutionPayload)
+      }
+    );
 
-      await addDoc(collection(db, 'emails'), emailPayload);
-
-      // Save to CRM messages
+    if (evolutionResponse.ok) {
+      // Salvar no CRM
       await addDoc(collection(db, 'crmMessages'), {
         startupId: startup.id,
         userId: startup.userId,
         senderName,
-        recipientName,
-        recipientEmail,
-        recipientType: contact?.type || 'startup',
-        messageType: 'email',
-        subject: processedSubject,
-        message: processedMessage,
+        recipientName: contact.name,
+        recipientPhone: formattedPhone,
+        recipientType: contact.type || 'startup',
+        messageType: 'whatsapp',
+        message: finalWhatsAppMessage,
         sentAt: new Date().toISOString(),
         status: 'sent',
         automatic: true,
-        stageId: stage.id
+        stageId: stage.id,
+        contactId: contact.id,
+        multiContact: true
       });
 
-      console.log(`✅ EMAIL ENVIADO COM SUCESSO para ${startup.startupName} no estágio ${stage.name}`);
-      return { success: true, type: 'email' };
-
-    } else if (messageType === 'whatsapp' && recipientPhone) {
-      console.log(`📱 ENVIANDO WHATSAPP PARA: ${recipientPhone}`);
-      
-      // Format phone for Evolution API
-      const formatPhoneForEvolution = (phone: string): string => {
-        const cleanPhone = phone.replace(/\D/g, '');
-        
-        if (cleanPhone.startsWith('55')) {
-          return cleanPhone;
-        } else if (cleanPhone.length === 11) {
-          return '55' + cleanPhone;
-        } else if (cleanPhone.length === 10) {
-          return '55' + cleanPhone;
-        }
-        
-        return cleanPhone;
-      };
-
-      const formattedPhone = formatPhoneForEvolution(recipientPhone);
-      
-      // Add footer to WhatsApp message
-      const finalWhatsAppMessage = processedMessage + `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
-      
-      const evolutionPayload = {
-        number: formattedPhone,
-        text: finalWhatsAppMessage
-      };
-
-      console.log(`📱 PAYLOAD WHATSAPP:`, evolutionPayload);
-
-      const evolutionResponse = await fetch(
-        `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': EVOLUTION_API_CONFIG.instanceKey
-          },
-          body: JSON.stringify(evolutionPayload)
-        }
-      );
-
-      if (evolutionResponse.ok) {
-        // Save to CRM messages
-        await addDoc(collection(db, 'crmMessages'), {
-          startupId: startup.id,
-          userId: startup.userId,
-          senderName,
-          recipientName,
-          recipientPhone: formattedPhone,
-          recipientType: contact?.type || 'startup',
-          messageType: 'whatsapp',
-          message: finalWhatsAppMessage,
-          sentAt: new Date().toISOString(),
-          status: 'sent',
-          automatic: true,
-          stageId: stage.id
-        });
-
-        console.log(`✅ WHATSAPP ENVIADO COM SUCESSO para ${startup.startupName} no estágio ${stage.name}`);
-        return { success: true, type: 'whatsapp' };
-      } else {
-        const errorText = await evolutionResponse.text();
-        console.error(`❌ FALHA NO ENVIO DE WHATSAPP para ${startup.startupName}:`, errorText);
-        return { success: false, reason: 'api_error', error: errorText };
-      }
+      return { success: true, type: 'whatsapp' };
+    } else {
+      const errorText = await evolutionResponse.text();
+      console.error(`❌ FALHA NA EVOLUTION API para ${phone}:`, errorText);
+      return { success: false, reason: 'api_error', error: errorText };
     }
+
   } catch (error) {
-    console.error(`❌ ERRO NO ENVIO DE ${messageType.toUpperCase()} para ${startup.startupName}:`, error);
+    console.error(`❌ ERRO NO ENVIO DE WHATSAPP para ${phone}:`, error);
     return { success: false, reason: 'exception', error: error.message };
   }
-
-  return { success: false, reason: 'unknown' };
 };
 
 const DraggableStartupCard = ({ 
@@ -568,6 +666,12 @@ const PipelineStage = ({
           >
             <Edit size={12} />
             Personalizar mensagem
+            {hasTemplates && (
+              <div className="flex items-center gap-1 ml-2">
+                {stage.emailTemplate && <Mail size={10} className="text-blue-400" />}
+                {stage.whatsappTemplate && <div className="w-2 h-2 bg-green-400 rounded-full" />}
+              </div>
+            )}
           </button>
         </div>
         
@@ -580,6 +684,12 @@ const PipelineStage = ({
           >
             <Edit size={10} />
             Personalizar mensagem
+            {hasTemplates && (
+              <div className="flex items-center gap-1 ml-1">
+                {stage.emailTemplate && <Mail size={8} className="text-blue-400" />}
+                {stage.whatsappTemplate && <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />}
+              </div>
+            )}
           </button>
         </div>
       </div>
@@ -649,12 +759,16 @@ const PipelineBoard = ({
   onDeleteStage: (stageId: string) => void;
   onCustomizeMessage: (stage: PipelineStage) => void;
 }) => {
+  const [sendingMessages, setSendingMessages] = useState<string | null>(null);
+
   const handleDrop = async (startupId: string, newStage: string) => {
-    console.log(`🎯 INICIANDO MUDANÇA DE ESTÁGIO:`, {
+    console.log(`🎯 INICIANDO MUDANÇA DE ESTÁGIO PARA MÚLTIPLOS CONTATOS:`, {
       startupId,
       newStage,
       timestamp: new Date().toISOString()
     });
+
+    setSendingMessages(startupId);
 
     try {
       const startup = startups.find(s => s.id === startupId);
@@ -666,10 +780,11 @@ const PipelineBoard = ({
       console.log(`📋 STARTUP ENCONTRADA:`, {
         name: startup.startupName,
         currentStage: startup.stage,
-        newStage
+        newStage,
+        totalContacts: (startup.startupData.contacts?.length || 0) + 1 // +1 para o contato principal
       });
 
-      // Update startup stage in database FIRST
+      // Atualizar estágio no banco PRIMEIRO
       await updateDoc(doc(db, 'selectedStartups', startupId), {
         stage: newStage,
         updatedAt: new Date().toISOString()
@@ -677,7 +792,7 @@ const PipelineBoard = ({
 
       console.log(`✅ ESTÁGIO ATUALIZADO NO BANCO DE DADOS`);
 
-      // Get user data for automatic messages
+      // Buscar dados do usuário
       const userDoc = await getDoc(doc(db, 'users', startup.userId));
       const userData = userDoc.data();
       const senderName = userData?.name || '';
@@ -689,7 +804,7 @@ const PipelineBoard = ({
         userId: startup.userId
       });
 
-      // Find the new stage configuration
+      // Buscar configuração do estágio
       const stageConfig = stages.find(s => s.id === newStage);
       if (!stageConfig) {
         console.error(`❌ CONFIGURAÇÃO DO ESTÁGIO NÃO ENCONTRADA: ${newStage}`);
@@ -700,58 +815,64 @@ const PipelineBoard = ({
       console.log(`⚙️ CONFIGURAÇÃO DO ESTÁGIO ENCONTRADA:`, {
         stageName: stageConfig.name,
         hasEmailTemplate: !!(stageConfig.emailTemplate && stageConfig.emailTemplate.trim()),
-        hasWhatsAppTemplate: !!(stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim()),
-        emailTemplateLength: stageConfig.emailTemplate?.length || 0,
-        whatsappTemplateLength: stageConfig.whatsappTemplate?.length || 0
+        hasWhatsAppTemplate: !!(stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim())
       });
 
-      // CRÍTICO: SEMPRE TENTAR ENVIAR MENSAGENS CONFIGURADAS
-      const emailResult = await sendConfiguredMessage(
+      // ENVIAR MENSAGENS PARA TODOS OS CONTATOS
+      const results = await sendMessagesToAllContacts(
         startup,
         stageConfig,
-        'email',
-        stageConfig.emailTemplate || '',
-        stageConfig.emailSubject || `${senderCompany} - ${stageConfig.name}`,
         senderName,
         senderCompany
       );
 
-      const whatsappResult = await sendConfiguredMessage(
-        startup,
-        stageConfig,
-        'whatsapp',
-        stageConfig.whatsappTemplate || '',
-        '',
-        senderName,
-        senderCompany
-      );
+      console.log(`📊 RESULTADO FINAL DOS ENVIOS:`, results);
 
-      console.log(`📊 RESULTADO DOS ENVIOS:`, {
-        email: emailResult,
-        whatsapp: whatsappResult,
-        stageName: stageConfig.name,
-        startupName: startup.startupName
-      });
-
-      // Update UI
+      // Atualizar UI
       onStageChange(startupId, newStage);
 
-      // Show success message if any message was sent
-      if (emailResult.success || whatsappResult.success) {
-        const sentTypes = [];
-        if (emailResult.success) sentTypes.push('Email');
-        if (whatsappResult.success) sentTypes.push('WhatsApp');
+      // Mostrar notificação de sucesso
+      if (results.emailsSent > 0 || results.whatsappsSent > 0) {
+        const successMessages = [];
+        if (results.emailsSent > 0) {
+          successMessages.push(`${results.emailsSent} email${results.emailsSent > 1 ? 's' : ''}`);
+        }
+        if (results.whatsappsSent > 0) {
+          successMessages.push(`${results.whatsappsSent} WhatsApp${results.whatsappsSent > 1 ? 's' : ''}`);
+        }
         
-        console.log(`🎉 MENSAGENS ENVIADAS COM SUCESSO: ${sentTypes.join(' e ')} para ${startup.startupName} no estágio ${stageConfig.name}`);
+        console.log(`🎉 MENSAGENS ENVIADAS COM SUCESSO: ${successMessages.join(' e ')} para ${startup.startupName} no estágio ${stageConfig.name}`);
+        
+        // Você pode adicionar uma notificação toast aqui se desejar
+        // toast.success(`Mensagens enviadas: ${successMessages.join(' e ')}`);
+      }
+
+      if (results.emailsFailed > 0 || results.whatsappsFailed > 0) {
+        console.log(`⚠️ ALGUMAS MENSAGENS FALHARAM: ${results.emailsFailed} emails e ${results.whatsappsFailed} WhatsApps`);
       }
 
     } catch (error) {
       console.error(`❌ ERRO GERAL NA MUDANÇA DE ESTÁGIO:`, error);
+    } finally {
+      setSendingMessages(null);
     }
   };
 
   return (
     <>
+      {/* Loading overlay quando enviando mensagens */}
+      {sendingMessages && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 text-center">
+            <div className="animate-spin mx-auto w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
+            <h3 className="text-lg font-bold text-white mb-2">Enviando Mensagens</h3>
+            <p className="text-gray-300">
+              Enviando mensagens automáticas para todos os contatos da startup...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Layout - One stage per row */}
       <div className="grid grid-cols-1 gap-6 lg:hidden">
         {stages.map((stage) => {
