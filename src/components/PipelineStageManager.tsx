@@ -32,36 +32,36 @@ const DEFAULT_STAGES: PipelineStage[] = [
     name: 'Selecionada', 
     color: 'bg-blue-200 text-blue-800 border-blue-300', 
     order: 1,
-    emailSubject: '{{senderCompany}} - Oportunidade de Colaboração com {{startupName}}',
-    emailTemplate: 'Olá {{startupName}},\n\nEspero que esteja bem! Sou {{senderName}} da {{senderCompany}}.\n\nTemos acompanhado o trabalho da {{startupName}} e ficamos impressionados com a solução que vocês desenvolveram. Acreditamos que há uma grande sinergia entre nossos objetivos e gostaríamos de explorar possibilidades de colaboração.\n\nGostaria de agendar uma conversa para conhecermos melhor a {{startupName}} e apresentarmos nossa empresa e nossos desafios.\n\nFico no aguardo do seu retorno.\n\nAtenciosamente,\n{{senderName}}',
-    whatsappTemplate: 'Olá! Sou {{senderName}} da {{senderCompany}}. Ficamos impressionados com a solução da {{startupName}} e gostaríamos de explorar uma possível colaboração. Podemos agendar uma conversa? 🚀'
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
   },
   { 
     id: 'contatada', 
     name: 'Contatada', 
     color: 'bg-red-200 text-red-800 border-red-300', 
     order: 2,
-    emailSubject: '{{senderCompany}} - Próximos Passos com {{startupName}}',
-    emailTemplate: 'Olá {{startupName}},\n\nObrigado pelo retorno! Fico feliz em saber do interesse em nossa proposta de colaboração.\n\nPara darmos continuidade, gostaria de agendar uma reunião para:\n- Apresentarmos nossa empresa e nossos desafios\n- Conhecermos melhor a solução da {{startupName}}\n- Discutirmos possibilidades de parceria\n\nTeria disponibilidade para uma conversa na próxima semana?\n\nAguardo seu retorno.\n\nAtenciosamente,\n{{senderName}}',
-    whatsappTemplate: 'Ótimo! Que tal agendarmos uma reunião para apresentarmos nossos desafios e conhecermos melhor a solução da {{startupName}}? Teria disponibilidade na próxima semana? 📅'
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
   },
   { 
     id: 'entrevistada', 
     name: 'Entrevistada', 
     color: 'bg-green-200 text-green-800 border-green-300', 
     order: 3,
-    emailSubject: '{{senderCompany}} - Avançando para POC com {{startupName}}',
-    emailTemplate: 'Olá {{startupName}},\n\nFoi um prazer conhecer melhor a equipe e a solução da {{startupName}} em nossa reunião.\n\nFicamos muito empolgados com as possibilidades de colaboração e gostaríamos de avançar para a próxima etapa: desenvolvimento de um Proof of Concept (POC).\n\nVamos preparar um briefing detalhado com os requisitos e objetivos do POC. Em breve entraremos em contato com mais informações.\n\nObrigado pelo tempo e dedicação!\n\nAtenciosamente,\n{{senderName}}',
-    whatsappTemplate: 'Excelente reunião! Ficamos empolgados com a {{startupName}} e queremos avançar para um POC. Em breve enviaremos o briefing detalhado. Obrigado! 🎯'
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
   },
   { 
     id: 'poc', 
     name: 'POC', 
     color: 'bg-orange-200 text-orange-800 border-orange-300', 
     order: 4,
-    emailSubject: '{{senderCompany}} - Briefing POC {{startupName}}',
-    emailTemplate: 'Olá {{startupName}},\n\nParabéns! Chegamos à etapa de Proof of Concept.\n\nSegue em anexo o briefing detalhado com:\n- Objetivos do POC\n- Requisitos técnicos\n- Cronograma proposto\n- Critérios de avaliação\n\nEstamos ansiosos para ver a solução da {{startupName}} em ação e avaliar como podemos integrar essa inovação em nossos processos.\n\nQualquer dúvida, estou à disposição.\n\nVamos inovar juntos!\n\n{{senderName}}',
-    whatsappTemplate: 'Parabéns {{startupName}}! 🎉 Chegamos ao POC! Enviamos o briefing detalhado por email. Estamos ansiosos para ver a solução em ação! Vamos inovar juntos! 💡'
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
   }
 ];
 
@@ -407,7 +407,7 @@ const DraggableStageItem = ({
         // Display Stage
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <GripVertical size={20} className="text-gray-400 hover:text-gray-300" />
+            <GripVertical size={20} className="text-gray-400 group-hover:text-gray-300" />
             <span className={`px-3 py-1 rounded-full border font-medium ${stage.color}`}>
               {stage.name}
             </span>
