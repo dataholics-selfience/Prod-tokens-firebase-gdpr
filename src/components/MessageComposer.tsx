@@ -281,11 +281,9 @@ const MessageComposer = () => {
       let errorMessage = '';
       let finalMessage = message.trim();
       let instanceUsed = '';
+      let isFirstMessage = false;
 
       if (messageType === 'whatsapp') {
-        // Add footer to WhatsApp message
-        finalMessage += `\n\nMensagem enviada pela genoi.net pelo cliente ${senderCompany} para a ${startupData.startupName}`;
-        
         // Send via Evolution API with instance management
         const validation = validateAndFormatPhone(selectedPhone!);
         const formattedPhone = validation.formattedNumber!;
@@ -296,13 +294,16 @@ const MessageComposer = () => {
           startupData.id,
           auth.currentUser.uid,
           formattedPhone,
-          finalMessage
+          finalMessage,
+          senderCompany,
+          startupData.startupName
         );
 
         if (whatsappResult.success) {
           success = true;
           instanceUsed = whatsappResult.instanceUsed || '';
-          console.log(`✅ WhatsApp enviado com sucesso via instância: ${instanceUsed}`);
+          isFirstMessage = whatsappResult.isFirstMessage || false;
+          console.log(`✅ WhatsApp enviado com sucesso via instância: ${instanceUsed} (primeira mensagem: ${isFirstMessage})`);
         } else {
           errorMessage = whatsappResult.error || 'Falha no envio do WhatsApp';
           console.error(`❌ Falha no envio do WhatsApp:`, whatsappResult.error);
@@ -401,6 +402,9 @@ const MessageComposer = () => {
           if (instanceUsed) {
             messageData.whatsappInstance = instanceUsed;
           }
+          if (isFirstMessage !== undefined) {
+            messageData.isFirstMessage = isFirstMessage;
+          }
         }
         if (messageType === 'email' && subject.trim()) {
           messageData.subject = subject.trim();
@@ -410,7 +414,7 @@ const MessageComposer = () => {
 
         const successMessage = messageType === 'email' 
           ? t.emailSentSuccess 
-          : `${t.whatsAppSentSuccess}${instanceUsed ? ` (Instância: ${instanceUsed})` : ''}`;
+          : `${t.whatsAppSentSuccess}${instanceUsed ? ` (Instância: ${instanceUsed})` : ''}${isFirstMessage ? ' - Primeira mensagem com complemento' : ' - Mensagem subsequente'}`;
 
         setStatus({ 
           type: 'success', 
@@ -728,6 +732,11 @@ const MessageComposer = () => {
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
               {t.message} *
+              {messageType === 'whatsapp' && (
+                <span className="text-xs text-blue-400 block mt-1">
+                  💡 O complemento "Mensagem enviada pela genoi.net..." será adicionado automaticamente apenas na primeira mensagem para esta startup
+                </span>
+              )}
             </label>
             <textarea
               value={message}

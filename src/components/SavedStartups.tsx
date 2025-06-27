@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PipelineStageManager from './PipelineStageManager';
 import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
+import { sendWhatsAppMessage } from '../utils/whatsappInstanceManager';
 
 interface SavedStartupType {
   id: string;
@@ -84,11 +85,6 @@ const DEFAULT_STAGES: PipelineStage[] = [
     whatsappTemplate: ''
   }
 ];
-
-const EVOLUTION_API_CONFIG = {
-  baseUrl: 'https://evolution-api-production-f719.up.railway.app',
-  instanceKey: '215D70C6CC83-4EE4-B55A-DE7D4146CBF1'
-};
 
 const StarRating = ({ rating }: { rating: number }) => {
   return (
@@ -446,29 +442,18 @@ const sendWhatsAppToContact = async (
     // Usar o número validado e formatado
     const formattedPhone = validation.formattedNumber!;
     
-    // Adicionar footer ao WhatsApp
-    const finalWhatsAppMessage = processedMessage + `\n\nMensagem automática enviada pela genoi.net pelo cliente ${senderCompany} para a ${startup.startupName}`;
+    console.log(`📱 Enviando WhatsApp automático para startup ${startup.id} via sistema de instâncias`);
     
-    // Payload para Evolution API
-    const evolutionPayload = {
-      number: formattedPhone,
-      text: finalWhatsAppMessage
-    };
-
-    // Enviar via Evolution API
-    const evolutionResponse = await fetch(
-      `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${EVOLUTION_API_CONFIG.instanceKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': EVOLUTION_API_CONFIG.instanceKey
-        },
-        body: JSON.stringify(evolutionPayload)
-      }
+    // Enviar via sistema de instâncias (sem complemento automático para mensagens automáticas)
+    const whatsappResult = await sendWhatsAppMessage(
+      startup.id,
+      startup.userId,
+      formattedPhone,
+      processedMessage
+      // Não passar senderCompany e startupName para evitar complemento em mensagens automáticas
     );
 
-    if (evolutionResponse.ok) {
+    if (whatsappResult.success) {
       // Salvar no CRM
       await addDoc(collection(db, 'crmMessages'), {
         startupId: startup.id,
@@ -478,20 +463,20 @@ const sendWhatsAppToContact = async (
         recipientPhone: formattedPhone,
         recipientType: contact.type || 'startup',
         messageType: 'whatsapp',
-        message: finalWhatsAppMessage,
+        message: processedMessage,
         sentAt: new Date().toISOString(),
         status: 'sent',
         automatic: true,
         stageId: stage.id,
         contactId: contact.id,
-        multiContact: true
+        multiContact: true,
+        whatsappInstance: whatsappResult.instanceUsed
       });
 
-      return { success: true, type: 'whatsapp' };
+      return { success: true, type: 'whatsapp', instanceUsed: whatsappResult.instanceUsed };
     } else {
-      const errorText = await evolutionResponse.text();
-      console.error(`❌ FALHA NA EVOLUTION API para ${phone}:`, errorText);
-      return { success: false, reason: 'api_error', error: errorText };
+      console.error(`❌ FALHA NA EVOLUTION API para ${phone}:`, whatsappResult.error);
+      return { success: false, reason: 'api_error', error: whatsappResult.error };
     }
 
   } catch (error) {

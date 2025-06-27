@@ -39,6 +39,33 @@ interface UserInstanceCounter {
 }
 
 /**
+ * Verifica se é a primeira mensagem WhatsApp do usuário para uma startup
+ */
+async function isFirstWhatsAppMessage(startupId: string, userId: string): Promise<boolean> {
+  try {
+    console.log(`🔍 Verificando se é primeira mensagem WhatsApp para startup: ${startupId}, usuário: ${userId}`);
+
+    const q = query(
+      collection(db, 'crmMessages'),
+      where('startupId', '==', startupId),
+      where('userId', '==', userId),
+      where('messageType', '==', 'whatsapp')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const isFirst = querySnapshot.empty;
+
+    console.log(`${isFirst ? '🆕' : '🔄'} ${isFirst ? 'Primeira' : 'Mensagem subsequente'} mensagem WhatsApp para esta startup`);
+    
+    return isFirst;
+  } catch (error) {
+    console.error('Erro ao verificar primeira mensagem:', error);
+    // Em caso de erro, assumir que é primeira mensagem para garantir o complemento
+    return true;
+  }
+}
+
+/**
  * Obtém a próxima instância em sequência para um usuário
  */
 async function getNextInstanceForUser(userId: string): Promise<number> {
@@ -153,30 +180,48 @@ export async function sendWhatsAppMessage(
   startupId: string,
   userId: string,
   phoneNumber: string,
-  message: string
+  message: string,
+  senderCompany?: string,
+  startupName?: string
 ): Promise<{
   success: boolean;
   instanceUsed?: string;
   error?: string;
   response?: any;
+  isFirstMessage?: boolean;
 }> {
   try {
     console.log(`📱 Iniciando envio de WhatsApp para startup: ${startupId}`);
+
+    // Verificar se é primeira mensagem
+    const isFirst = await isFirstWhatsAppMessage(startupId, userId);
 
     // Obter instância para esta startup
     const { instanceKey, isNewAssignment } = await getInstanceForStartup(startupId, userId);
     
     console.log(`📡 Usando instância: ${instanceKey} ${isNewAssignment ? '(nova atribuição)' : '(existente)'}`);
 
+    // Preparar mensagem final
+    let finalMessage = message;
+    
+    // Adicionar complemento apenas na primeira mensagem
+    if (isFirst && senderCompany && startupName) {
+      finalMessage += `\n\nMensagem enviada pela genoi.net pelo cliente ${senderCompany} para a ${startupName}`;
+      console.log(`📝 Complemento adicionado à primeira mensagem para ${startupName}`);
+    } else if (!isFirst) {
+      console.log(`📝 Mensagem subsequente - sem complemento`);
+    }
+
     // Payload para Evolution API
     const payload = {
       number: phoneNumber,
-      text: message
+      text: finalMessage
     };
 
     console.log(`🚀 Enviando mensagem via Evolution API:`, {
       url: `${EVOLUTION_API_CONFIG.baseUrl}/message/sendText/${instanceKey}`,
-      payload
+      isFirstMessage: isFirst,
+      hasComplement: isFirst && senderCompany && startupName
     });
 
     // Enviar via Evolution API
@@ -199,7 +244,8 @@ export async function sendWhatsAppMessage(
       return {
         success: true,
         instanceUsed: instanceKey,
-        response: responseData
+        response: responseData,
+        isFirstMessage: isFirst
       };
     } else {
       const errorText = await response.text();
@@ -208,7 +254,8 @@ export async function sendWhatsAppMessage(
       return {
         success: false,
         error: `Erro na Evolution API: ${response.status} - ${errorText}`,
-        instanceUsed: instanceKey
+        instanceUsed: instanceKey,
+        isFirstMessage: isFirst
       };
     }
 
