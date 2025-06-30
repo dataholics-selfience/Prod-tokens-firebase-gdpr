@@ -355,7 +355,7 @@ const MessageComposer = () => {
           }],
           from: { 
             email: 'contact@genoi.com.br', 
-            name: 'Gen.OI - Inovação Aberta' 
+            name: 'Gen.OI - Open Innovation' 
           },
           subject: subject.trim(),
           html: emailHtml,

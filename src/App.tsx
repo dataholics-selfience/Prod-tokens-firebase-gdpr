@@ -7,6 +7,7 @@ import { initializeLanguage } from './utils/i18n';
 import Layout from './components/Layout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import GoogleRegisterComplete from './components/auth/GoogleRegisterComplete';
 import ForgotPassword from './components/auth/ForgotPassword';
 import UserManagement from './components/UserProfile/UserManagement';
 import NewChallenge from './components/NewChallenge';
@@ -79,6 +80,7 @@ function App() {
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
+        <Route path="/register/google-complete" element={!user ? <Navigate to="/login" replace /> : <GoogleRegisterComplete />} />
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
         <Route path="/verify-email" element={<EmailVerification />} />
         <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
