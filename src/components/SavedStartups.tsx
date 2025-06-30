@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Star, Calendar, Building2, MapPin, Users, Briefcase, 
-  ArrowLeft, Mail, Globe, Box, Linkedin, Facebook, 
-  Twitter, Instagram, Trash2, FolderOpen, ChevronRight,
-  ChevronLeft, Plus, GripVertical, Settings, Edit
+  Star, Calendar, Building2, MapPin, Users, Briefcase, Award, 
+  Target, Rocket, ArrowLeft, Mail, Globe, Box, Linkedin,
+  Facebook, Twitter, Instagram, Trash2, FolderOpen, Plus, Check, X, BarChart3
 } from 'lucide-react';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -167,19 +166,37 @@ const SocialLinks = ({ startup, className = "" }: { startup: StartupType; classN
   );
 };
 
-// FUNÇÃO CRÍTICA: ENVIAR MENSAGENS PARA TODOS OS CONTATOS
-const sendMessagesToAllContacts = async (
+// FUNÇÃO CRÍTICA REFATORADA: ENVIAR MENSAGENS AUTOMÁTICAS PARA TODOS OS CONTATOS
+const sendAutomaticMessages = async (
   startup: SavedStartupType, 
   stage: PipelineStage,
   senderName: string,
   senderCompany: string
 ) => {
-  console.log(`🚀 INICIANDO ENVIO PARA TODOS OS CONTATOS:`, {
+  console.log(`🚀 INICIANDO ENVIO DE MENSAGENS AUTOMÁTICAS:`, {
     startup: startup.startupName,
     stage: stage.name,
     hasEmailTemplate: !!(stage.emailTemplate && stage.emailTemplate.trim()),
-    hasWhatsAppTemplate: !!(stage.whatsappTemplate && stage.whatsappTemplate.trim())
+    hasWhatsAppTemplate: !!(stage.whatsappTemplate && stage.whatsappTemplate.trim()),
+    timestamp: new Date().toISOString()
   });
+
+  // Verificar se há templates configurados
+  const hasEmailTemplate = stage.emailTemplate && stage.emailTemplate.trim();
+  const hasWhatsAppTemplate = stage.whatsappTemplate && stage.whatsappTemplate.trim();
+
+  if (!hasEmailTemplate && !hasWhatsAppTemplate) {
+    console.log(`⚠️ NENHUM TEMPLATE CONFIGURADO para o estágio ${stage.name} - pulando envio`);
+    return {
+      emailsSent: 0,
+      whatsappsSent: 0,
+      emailsFailed: 0,
+      whatsappsFailed: 0,
+      totalContacts: 0,
+      skipped: true,
+      reason: 'Nenhum template configurado'
+    };
+  }
 
   // Coletar todos os contatos disponíveis
   const allContacts = [];
@@ -195,12 +212,12 @@ const sendMessagesToAllContacts = async (
     });
   }
 
-  // 2. Contatos das redes sociais
-  if (startup.startupData.socialLinks?.linkedin) {
+  // 2. Contatos das redes sociais (apenas se tiverem email)
+  if (startup.startupData.socialLinks?.linkedin && startup.startupData.email) {
     allContacts.push({
       id: 'startup-linkedin',
       name: `${startup.startupData.name} (LinkedIn)`,
-      emails: startup.startupData.email ? [startup.startupData.email] : [],
+      emails: [startup.startupData.email],
       phones: [],
       linkedin: startup.startupData.socialLinks.linkedin,
       type: 'startup' as const,
@@ -208,11 +225,11 @@ const sendMessagesToAllContacts = async (
     });
   }
 
-  if (startup.startupData.socialLinks?.instagram) {
+  if (startup.startupData.socialLinks?.instagram && startup.startupData.email) {
     allContacts.push({
       id: 'startup-instagram',
       name: `${startup.startupData.name} (Instagram)`,
-      emails: startup.startupData.email ? [startup.startupData.email] : [],
+      emails: [startup.startupData.email],
       phones: [],
       instagram: startup.startupData.socialLinks.instagram,
       type: 'startup' as const,
@@ -226,7 +243,11 @@ const sendMessagesToAllContacts = async (
   }
 
   console.log(`📋 TOTAL DE CONTATOS ENCONTRADOS: ${allContacts.length}`, {
-    contacts: allContacts.map(c => ({ name: c.name, emails: c.emails?.length || 0, phones: c.phones?.length || 0 }))
+    contacts: allContacts.map(c => ({ 
+      name: c.name, 
+      emails: c.emails?.length || 0, 
+      phones: c.phones?.length || 0 
+    }))
   });
 
   const results = {
@@ -234,17 +255,19 @@ const sendMessagesToAllContacts = async (
     whatsappsSent: 0,
     emailsFailed: 0,
     whatsappsFailed: 0,
-    totalContacts: allContacts.length
+    totalContacts: allContacts.length,
+    skipped: false
   };
 
   // Processar cada contato
   for (const contact of allContacts) {
     console.log(`📞 PROCESSANDO CONTATO: ${contact.name}`);
 
-    // ENVIAR EMAILS para todos os emails do contato
-    if (stage.emailTemplate && stage.emailTemplate.trim() && contact.emails && contact.emails.length > 0) {
+    // ENVIAR EMAILS (apenas se há template de email configurado)
+    if (hasEmailTemplate && contact.emails && contact.emails.length > 0) {
       for (const email of contact.emails) {
         if (email && email.trim()) {
+          console.log(`📧 Tentando enviar email para: ${email}`);
           const emailResult = await sendEmailToContact(
             startup,
             stage,
@@ -263,12 +286,15 @@ const sendMessagesToAllContacts = async (
           }
         }
       }
+    } else if (hasEmailTemplate) {
+      console.log(`⚠️ Template de email configurado, mas contato ${contact.name} não tem emails`);
     }
 
-    // ENVIAR WHATSAPP para todos os telefones do contato
-    if (stage.whatsappTemplate && stage.whatsappTemplate.trim() && contact.phones && contact.phones.length > 0) {
+    // ENVIAR WHATSAPP (apenas se há template de WhatsApp configurado)
+    if (hasWhatsAppTemplate && contact.phones && contact.phones.length > 0) {
       for (const phone of contact.phones) {
         if (phone && phone.trim()) {
+          console.log(`📱 Tentando enviar WhatsApp para: ${phone}`);
           const whatsappResult = await sendWhatsAppToContact(
             startup,
             stage,
@@ -287,10 +313,12 @@ const sendMessagesToAllContacts = async (
           }
         }
       }
+    } else if (hasWhatsAppTemplate) {
+      console.log(`⚠️ Template de WhatsApp configurado, mas contato ${contact.name} não tem telefones`);
     }
   }
 
-  console.log(`📊 RESULTADO FINAL DO ENVIO:`, results);
+  console.log(`📊 RESULTADO FINAL DO ENVIO AUTOMÁTICO:`, results);
   return results;
 };
 
@@ -373,17 +401,23 @@ const sendEmailToContact = async (
         email: 'contact@genoi.net', 
         name: 'Gen.OI - Suporte' 
       },
-      tags: ['crm', 'automatic-message', stage.id, 'multi-contact'],
+      tags: ['crm', 'automatic-message', 'stage-change', stage.id],
       metadata: { 
         startupId: startup.id, 
         userId: startup.userId,
         stageId: stage.id,
         contactId: contact.id,
         automatic: true,
-        multiContact: true,
+        messageType: 'stage_change_email',
         timestamp: new Date().toISOString()
       }
     };
+
+    console.log(`📧 Enviando email automático via MailerSend:`, {
+      to: email,
+      subject: processedSubject,
+      stage: stage.name
+    });
 
     // Enviar via MailerSend Firebase Extension
     await addDoc(collection(db, 'emails'), emailPayload);
@@ -403,14 +437,15 @@ const sendEmailToContact = async (
       status: 'sent',
       automatic: true,
       stageId: stage.id,
+      stageName: stage.name,
       contactId: contact.id,
-      multiContact: true
+      messageCategory: 'stage_change'
     });
 
     return { success: true, type: 'email' };
 
   } catch (error) {
-    console.error(`❌ ERRO NO ENVIO DE EMAIL para ${email}:`, error);
+    console.error(`❌ ERRO NO ENVIO DE EMAIL AUTOMÁTICO para ${email}:`, error);
     return { success: false, reason: 'exception', error: error.message };
   }
 };
@@ -444,7 +479,7 @@ const sendWhatsAppToContact = async (
     
     console.log(`📱 Enviando WhatsApp automático para startup ${startup.id} via sistema de instâncias`);
     
-    // Enviar via sistema de instâncias (sem complemento automático para mensagens automáticas)
+    // Enviar via sistema de instâncias (sem complemento automático para mensagens automáticas de estágio)
     const whatsappResult = await sendWhatsAppMessage(
       startup.id,
       startup.userId,
@@ -468,8 +503,9 @@ const sendWhatsAppToContact = async (
         status: 'sent',
         automatic: true,
         stageId: stage.id,
+        stageName: stage.name,
         contactId: contact.id,
-        multiContact: true,
+        messageCategory: 'stage_change',
         whatsappInstance: whatsappResult.instanceUsed
       });
 
@@ -480,7 +516,7 @@ const sendWhatsAppToContact = async (
     }
 
   } catch (error) {
-    console.error(`❌ ERRO NO ENVIO DE WHATSAPP para ${phone}:`, error);
+    console.error(`❌ ERRO NO ENVIO DE WHATSAPP AUTOMÁTICO para ${phone}:`, error);
     return { success: false, reason: 'exception', error: error.message };
   }
 };
@@ -532,7 +568,7 @@ const DraggableStartupCard = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-1">
-          <GripVertical size={16} className="text-gray-400 group-hover:text-gray-300" />
+          <div className="w-2 h-2 bg-blue-400 rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
           <span className="text-white font-medium text-sm truncate">{startup.startupName}</span>
         </div>
         <button
@@ -636,40 +672,31 @@ const PipelineStage = ({
           )}
         </div>
         
-        {/* Desktop: Show button below stage name */}
-        <div className="hidden lg:block">
+        {/* Template Configuration Button */}
+        <div className="flex flex-col gap-2">
           <button
             onClick={() => onCustomizeMessage(stage)}
-            className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
-            title="Personalizar mensagem automática"
+            className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+            title="Configurar mensagens automáticas"
           >
-            <Edit size={12} />
-            Personalizar mensagem
+            <Mail size={14} />
+            Configurar Mensagens
             {hasTemplates && (
               <div className="flex items-center gap-1 ml-2">
-                {stage.emailTemplate && <Mail size={10} className="text-blue-400" />}
+                {stage.emailTemplate && <div className="w-2 h-2 bg-blue-400 rounded-full" />}
                 {stage.whatsappTemplate && <div className="w-2 h-2 bg-green-400 rounded-full" />}
               </div>
             )}
           </button>
-        </div>
-        
-        {/* Mobile: Show button inline with stage name */}
-        <div className="lg:hidden flex justify-end">
-          <button
-            onClick={() => onCustomizeMessage(stage)}
-            className="flex items-center gap-1 px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
-            title="Personalizar mensagem"
-          >
-            <Edit size={10} />
-            Personalizar mensagem
-            {hasTemplates && (
-              <div className="flex items-center gap-1 ml-1">
-                {stage.emailTemplate && <Mail size={8} className="text-blue-400" />}
-                {stage.whatsappTemplate && <div className="w-1.5 h-1.5 bg-green-400 rounded-full" />}
-              </div>
-            )}
-          </button>
+          
+          {hasTemplates && (
+            <div className="text-xs text-gray-400 px-3">
+              ✨ Mensagens automáticas configuradas
+              {stage.emailTemplate && stage.whatsappTemplate && ' (Email + WhatsApp)'}
+              {stage.emailTemplate && !stage.whatsappTemplate && ' (Email)'}
+              {!stage.emailTemplate && stage.whatsappTemplate && ' (WhatsApp)'}
+            </div>
+          )}
         </div>
       </div>
       
@@ -678,6 +705,11 @@ const PipelineStage = ({
           <div className="text-center py-8 text-gray-500">
             <Plus size={24} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">Arraste startups aqui</p>
+            {hasTemplates && (
+              <p className="text-xs text-blue-400 mt-2">
+                Mensagens automáticas serão enviadas
+              </p>
+            )}
           </div>
         ) : (
           startups.map((startup) => (
@@ -739,15 +771,17 @@ const PipelineBoard = ({
   onCustomizeMessage: (stage: PipelineStage) => void;
 }) => {
   const [sendingMessages, setSendingMessages] = useState<string | null>(null);
+  const [messageResults, setMessageResults] = useState<any>(null);
 
   const handleDrop = async (startupId: string, newStage: string) => {
-    console.log(`🎯 INICIANDO MUDANÇA DE ESTÁGIO PARA MÚLTIPLOS CONTATOS:`, {
+    console.log(`🎯 INICIANDO MUDANÇA DE ESTÁGIO COM MENSAGENS AUTOMÁTICAS:`, {
       startupId,
       newStage,
       timestamp: new Date().toISOString()
     });
 
     setSendingMessages(startupId);
+    setMessageResults(null);
 
     try {
       const startup = startups.find(s => s.id === startupId);
@@ -756,11 +790,17 @@ const PipelineBoard = ({
         return;
       }
 
+      // Verificar se é mudança real de estágio
+      if (startup.stage === newStage) {
+        console.log(`⚠️ STARTUP JÁ ESTÁ NO ESTÁGIO ${newStage} - não enviando mensagens`);
+        return;
+      }
+
       console.log(`📋 STARTUP ENCONTRADA:`, {
         name: startup.startupName,
         currentStage: startup.stage,
         newStage,
-        totalContacts: (startup.startupData.contacts?.length || 0) + 1 // +1 para o contato principal
+        totalContacts: (startup.startupData.contacts?.length || 0) + 1
       });
 
       // Atualizar estágio no banco PRIMEIRO
@@ -797,20 +837,23 @@ const PipelineBoard = ({
         hasWhatsAppTemplate: !!(stageConfig.whatsappTemplate && stageConfig.whatsappTemplate.trim())
       });
 
-      // ENVIAR MENSAGENS PARA TODOS OS CONTATOS
-      const results = await sendMessagesToAllContacts(
+      // ENVIAR MENSAGENS AUTOMÁTICAS PARA TODOS OS CONTATOS
+      const results = await sendAutomaticMessages(
         startup,
         stageConfig,
         senderName,
         senderCompany
       );
 
-      console.log(`📊 RESULTADO FINAL DOS ENVIOS:`, results);
+      console.log(`📊 RESULTADO FINAL DOS ENVIOS AUTOMÁTICOS:`, results);
 
       // Atualizar UI
       onStageChange(startupId, newStage);
 
-      // Mostrar notificação de sucesso
+      // Armazenar resultados para exibir notificação
+      setMessageResults(results);
+
+      // Mostrar notificação de sucesso se mensagens foram enviadas
       if (results.emailsSent > 0 || results.whatsappsSent > 0) {
         const successMessages = [];
         if (results.emailsSent > 0) {
@@ -820,10 +863,11 @@ const PipelineBoard = ({
           successMessages.push(`${results.whatsappsSent} WhatsApp${results.whatsappsSent > 1 ? 's' : ''}`);
         }
         
-        console.log(`🎉 MENSAGENS ENVIADAS COM SUCESSO: ${successMessages.join(' e ')} para ${startup.startupName} no estágio ${stageConfig.name}`);
-        
-        // Você pode adicionar uma notificação toast aqui se desejar
-        // toast.success(`Mensagens enviadas: ${successMessages.join(' e ')}`);
+        console.log(`🎉 MENSAGENS AUTOMÁTICAS ENVIADAS: ${successMessages.join(' e ')} para ${startup.startupName} no estágio ${stageConfig.name}`);
+      } else if (results.skipped) {
+        console.log(`⚠️ ENVIO PULADO: ${results.reason}`);
+      } else {
+        console.log(`⚠️ NENHUMA MENSAGEM ENVIADA - verifique se há contatos com email/telefone`);
       }
 
       if (results.emailsFailed > 0 || results.whatsappsFailed > 0) {
@@ -834,6 +878,8 @@ const PipelineBoard = ({
       console.error(`❌ ERRO GERAL NA MUDANÇA DE ESTÁGIO:`, error);
     } finally {
       setSendingMessages(null);
+      // Limpar resultados após 5 segundos
+      setTimeout(() => setMessageResults(null), 5000);
     }
   };
 
@@ -844,10 +890,59 @@ const PipelineBoard = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 text-center">
             <div className="animate-spin mx-auto w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
-            <h3 className="text-lg font-bold text-white mb-2">Enviando Mensagens</h3>
+            <h3 className="text-lg font-bold text-white mb-2">Enviando Mensagens Automáticas</h3>
             <p className="text-gray-300">
-              Enviando mensagens automáticas para todos os contatos da startup...
+              Processando templates e enviando mensagens para todos os contatos da startup...
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Notification de resultados */}
+      {messageResults && !sendingMessages && (
+        <div className="fixed top-4 right-4 bg-gray-800 border border-gray-600 rounded-lg p-4 max-w-sm z-40 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              {messageResults.skipped ? (
+                <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs">!</span>
+                </div>
+              ) : messageResults.emailsSent > 0 || messageResults.whatsappsSent > 0 ? (
+                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                  <Check size={16} className="text-white" />
+                </div>
+              ) : (
+                <div className="w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center">
+                  <X size={16} className="text-white" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <h4 className="text-white font-medium text-sm mb-1">
+                {messageResults.skipped ? 'Mensagens Puladas' : 'Mensagens Enviadas'}
+              </h4>
+              {messageResults.skipped ? (
+                <p className="text-gray-300 text-xs">{messageResults.reason}</p>
+              ) : (
+                <div className="text-gray-300 text-xs space-y-1">
+                  {messageResults.emailsSent > 0 && (
+                    <div>✅ {messageResults.emailsSent} email{messageResults.emailsSent > 1 ? 's' : ''}</div>
+                  )}
+                  {messageResults.whatsappsSent > 0 && (
+                    <div>✅ {messageResults.whatsappsSent} WhatsApp{messageResults.whatsappsSent > 1 ? 's' : ''}</div>
+                  )}
+                  {messageResults.emailsFailed > 0 && (
+                    <div>❌ {messageResults.emailsFailed} email{messageResults.emailsFailed > 1 ? 's' : ''} falharam</div>
+                  )}
+                  {messageResults.whatsappsFailed > 0 && (
+                    <div>❌ {messageResults.whatsappsFailed} WhatsApp{messageResults.whatsappsFailed > 1 ? 's' : ''} falharam</div>
+                  )}
+                  {messageResults.emailsSent === 0 && messageResults.whatsappsSent === 0 && !messageResults.skipped && (
+                    <div>Nenhuma mensagem enviada - verifique contatos</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1098,8 +1193,8 @@ const SavedStartups = () => {
               <ArrowLeft size={20} />
             </button>
             <div className="flex items-center gap-2 flex-1 ml-4">
-              <Settings size={20} className="text-gray-400" />
-              <h2 className="text-lg font-medium">Gerenciar Estágios</h2>
+              <Mail size={20} className="text-gray-400" />
+              <h2 className="text-lg font-medium">Configurar Mensagens Automáticas</h2>
             </div>
           </div>
         </div>
@@ -1133,8 +1228,8 @@ const SavedStartups = () => {
               onClick={() => setShowStageManager(true)}
               className="flex items-center gap-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
             >
-              <Settings size={16} />
-              Gerenciar Estágios
+              <Mail size={16} />
+              Configurar Mensagens
             </button>
           </div>
         </div>
