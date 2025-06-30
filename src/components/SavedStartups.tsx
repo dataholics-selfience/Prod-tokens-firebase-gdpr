@@ -352,7 +352,7 @@ const sendEmailToContact = async (
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Mensagem da Gen.OI. Message from Gen.OI</title>
+        <title>Mensagem da Gen.OI</title>
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
@@ -366,10 +366,11 @@ const sendEmailToContact = async (
             </div>
             <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
             <div style="font-size: 14px; color: #666;">
+              <p><strong>Atenciosamente,</strong><br>
               ${senderName}, ${senderCompany}</p>
               <p style="margin-top: 20px;">
                 <strong>Gen.OI</strong><br>
-                Conectando empresas às melhores startups do mundo. Connecting the best startups of the word.<br>
+                Conectando empresas às melhores startups do mundo<br>
                 🌐 <a href="https://genoi.net" style="color: #667eea;">genoi.net</a><br>
                 📧 <a href="mailto:contact@genoi.net" style="color: #667eea;">contact@genoi.net</a>
               </p>
@@ -377,7 +378,7 @@ const sendEmailToContact = async (
           </div>
         </div>
         <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
-          <p>Esta mensagem foi enviada automaticamente através da plataforma Gen.OI de inovação aberta. This message was sent by Gen.OI open innovation platform.</p>
+          <p>Esta mensagem foi enviada automaticamente através da plataforma Gen.OI de inovação aberta.</p>
         </div>
       </body>
       </html>
