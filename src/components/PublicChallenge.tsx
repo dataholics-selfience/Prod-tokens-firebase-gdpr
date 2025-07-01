@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface ChallengeData {
   id: string;
+  userId: string;
   title: string;
   description: string;
   companyName: string;
@@ -143,6 +144,35 @@ const PublicChallenge = () => {
     return true;
   };
 
+  const createStartupDataForPipeline = (formData: StartupFormData, challenge: ChallengeData) => {
+    return {
+      name: formData.startupName.trim(),
+      description: `Startup inscrita no desafio: ${challenge.title}`,
+      rating: 0, // Rating inicial para startups inscritas
+      website: formData.website.trim(),
+      category: 'Inscrita',
+      vertical: challenge.businessArea,
+      foundedYear: 'N/A',
+      teamSize: 'N/A',
+      businessModel: 'N/A',
+      email: formData.email.trim().toLowerCase(),
+      ipoStatus: 'N/A',
+      city: 'N/A',
+      reasonForChoice: `Startup se inscreveu no desafio público: ${challenge.title}`,
+      socialLinks: {},
+      contacts: [
+        {
+          id: 'founder-contact',
+          name: formData.founderName.trim(),
+          emails: [formData.email.trim().toLowerCase()],
+          phones: formData.whatsapp.trim() ? [formData.whatsapp.trim()] : [],
+          type: 'founder' as const,
+          role: 'Fundador'
+        }
+      ]
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -157,15 +187,57 @@ const PublicChallenge = () => {
     setSubmitting(true);
 
     try {
-      // Verificar se a startup já existe
-      const existingStartupQuery = query(
-        collection(db, 'startups'),
-        where('name', '==', formData.startupName.trim())
+      console.log(`📝 Processando inscrição da startup ${formData.startupName} no desafio ${challenge.title}`);
+
+      // 1. Verificar se a startup já existe no pipeline do criador do desafio
+      const existingPipelineQuery = query(
+        collection(db, 'selectedStartups'),
+        where('userId', '==', challenge.userId),
+        where('startupName', '==', formData.startupName.trim())
       );
       
-      const existingStartups = await getDocs(existingStartupQuery);
+      const existingPipeline = await getDocs(existingPipelineQuery);
       
-      const startupData = {
+      if (!existingPipeline.empty) {
+        console.log(`⚠️ Startup ${formData.startupName} já existe no pipeline do usuário ${challenge.userId}`);
+        setError('Esta startup já está registrada no pipeline deste desafio.');
+        setSubmitting(false);
+        return;
+      }
+
+      // 2. Criar dados da startup para o pipeline
+      const startupDataForPipeline = createStartupDataForPipeline(formData, challenge);
+
+      // 3. Adicionar startup ao pipeline CRM no estágio "Inscrita"
+      const pipelineData = {
+        userId: challenge.userId,
+        userEmail: challenge.userEmail || '',
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        startupName: formData.startupName.trim(),
+        startupData: startupDataForPipeline,
+        selectedAt: new Date().toISOString(),
+        stage: 'inscrita', // Estágio específico para inscrições públicas
+        updatedAt: new Date().toISOString(),
+        source: 'public_registration', // Identificar origem da startup
+        publicRegistrationData: {
+          founderName: formData.founderName.trim(),
+          pitchUrl: formData.pitchUrl.trim(),
+          registeredAt: new Date().toISOString(),
+          challengeSlug: slug
+        }
+      };
+
+      console.log(`💾 Adicionando startup ao pipeline CRM:`, {
+        startupName: formData.startupName,
+        stage: 'inscrita',
+        challengeOwner: challenge.userId
+      });
+
+      await addDoc(collection(db, 'selectedStartups'), pipelineData);
+
+      // 4. Criar registro na coleção de startups (para histórico)
+      const startupHistoryData = {
         name: formData.startupName.trim(),
         website: formData.website.trim(),
         pitchUrl: formData.pitchUrl.trim(),
@@ -173,27 +245,18 @@ const PublicChallenge = () => {
         email: formData.email.trim().toLowerCase(),
         whatsapp: formData.whatsapp.trim(),
         status: 'inscrita',
-        desafioId: challenge.id,
-        desafioTitle: challenge.title,
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        challengeOwnerId: challenge.userId,
         companyName: challenge.companyName,
         inscritaEm: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        source: 'public_registration'
       };
 
-      if (!existingStartups.empty) {
-        // Atualizar startup existente
-        const startupDoc = existingStartups.docs[0];
-        await addDoc(collection(db, 'startups'), {
-          ...startupDoc.data(),
-          ...startupData
-        });
-      } else {
-        // Criar nova startup
-        await addDoc(collection(db, 'startups'), {
-          ...startupData,
-          createdAt: new Date().toISOString()
-        });
-      }
+      await addDoc(collection(db, 'startups'), startupHistoryData);
+
+      console.log(`✅ Startup ${formData.startupName} adicionada com sucesso ao pipeline CRM no estágio "Inscrita"`);
 
       setSubmitted(true);
       
@@ -251,10 +314,18 @@ const PublicChallenge = () => {
             <h2 className="text-2xl font-bold mb-4">Inscrição Enviada!</h2>
             <p className="mb-6">
               Obrigado por se inscrever no desafio <strong>{challenge.title}</strong>. 
-              Sua startup foi registrada com sucesso e será avaliada pela equipe da {challenge.companyName}.
+              Sua startup foi registrada com sucesso e adicionada automaticamente ao pipeline CRM da {challenge.companyName}.
             </p>
+            <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4 mb-6">
+              <h3 className="text-blue-200 font-medium mb-2">📋 Próximos Passos</h3>
+              <ul className="text-blue-100 text-sm space-y-1 text-left">
+                <li>• Sua startup está no estágio "Inscrita" do pipeline</li>
+                <li>• A equipe da {challenge.companyName} será notificada</li>
+                <li>• Você receberá um retorno em breve via email</li>
+              </ul>
+            </div>
             <p className="text-sm text-green-300 mb-6">
-              Você receberá um retorno em breve através do email fornecido.
+              Acompanhe seu email para atualizações sobre o processo de seleção.
             </p>
             <button
               onClick={() => window.location.reload()}
@@ -332,6 +403,20 @@ const PublicChallenge = () => {
                 <Calendar size={16} />
                 <span className="font-medium">Publicado em:</span>
                 <span>{formatDate(challenge.createdAt)}</span>
+              </div>
+            </div>
+
+            {/* Pipeline Integration Info */}
+            <div className="mt-6 pt-6 border-t border-white/20">
+              <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4">
+                <h4 className="text-blue-200 font-medium mb-2 flex items-center gap-2">
+                  <CheckCircle size={16} />
+                  Processo Automatizado
+                </h4>
+                <p className="text-blue-100 text-sm">
+                  Ao se inscrever, sua startup será automaticamente adicionada ao pipeline CRM da {challenge.companyName} 
+                  no estágio "Inscrita", facilitando o acompanhamento do processo de seleção.
+                </p>
               </div>
             </div>
           </div>

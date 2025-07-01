@@ -25,6 +25,13 @@ interface SavedStartupType {
   selectedAt: string;
   stage: string;
   updatedAt: string;
+  source?: string;
+  publicRegistrationData?: {
+    founderName: string;
+    pitchUrl: string;
+    registeredAt: string;
+    challengeSlug: string;
+  };
 }
 
 interface PipelineStage {
@@ -39,10 +46,19 @@ interface PipelineStage {
 
 const DEFAULT_STAGES: PipelineStage[] = [
   { 
+    id: 'inscrita', 
+    name: 'Inscrita', 
+    color: 'bg-cyan-200 text-cyan-800 border-cyan-300', 
+    order: 0,
+    emailTemplate: '',
+    emailSubject: '',
+    whatsappTemplate: ''
+  },
+  { 
     id: 'mapeada', 
     name: 'Mapeada', 
     color: 'bg-yellow-200 text-yellow-800 border-yellow-300', 
-    order: 0,
+    order: 1,
     emailTemplate: '',
     emailSubject: '',
     whatsappTemplate: ''
@@ -51,7 +67,7 @@ const DEFAULT_STAGES: PipelineStage[] = [
     id: 'selecionada', 
     name: 'Selecionada', 
     color: 'bg-blue-200 text-blue-800 border-blue-300', 
-    order: 1,
+    order: 2,
     emailTemplate: '',
     emailSubject: '',
     whatsappTemplate: ''
@@ -60,7 +76,7 @@ const DEFAULT_STAGES: PipelineStage[] = [
     id: 'contatada', 
     name: 'Contatada', 
     color: 'bg-red-200 text-red-800 border-red-300', 
-    order: 2,
+    order: 3,
     emailTemplate: '',
     emailSubject: '',
     whatsappTemplate: ''
@@ -69,7 +85,7 @@ const DEFAULT_STAGES: PipelineStage[] = [
     id: 'entrevistada', 
     name: 'Entrevistada', 
     color: 'bg-green-200 text-green-800 border-green-300', 
-    order: 3,
+    order: 4,
     emailTemplate: '',
     emailSubject: '',
     whatsappTemplate: ''
@@ -78,7 +94,7 @@ const DEFAULT_STAGES: PipelineStage[] = [
     id: 'poc', 
     name: 'POC', 
     color: 'bg-orange-200 text-orange-800 border-orange-300', 
-    order: 4,
+    order: 5,
     emailTemplate: '',
     emailSubject: '',
     whatsappTemplate: ''
@@ -568,8 +584,15 @@ const DraggableStartupCard = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-1">
-          <div className="w-2 h-2 bg-blue-400 rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className={`w-2 h-2 rounded-full opacity-50 group-hover:opacity-100 transition-opacity ${
+            startup.source === 'public_registration' ? 'bg-cyan-400' : 'bg-blue-400'
+          }`} />
           <span className="text-white font-medium text-sm truncate">{startup.startupName}</span>
+          {startup.source === 'public_registration' && (
+            <span className="text-xs bg-cyan-600 text-cyan-100 px-2 py-1 rounded-full">
+              Inscrita
+            </span>
+          )}
         </div>
         <button
           onClick={handleRemove}
@@ -644,6 +667,7 @@ const PipelineStage = ({
   };
 
   const hasTemplates = stage.emailTemplate || stage.whatsappTemplate;
+  const publicRegistrations = startups.filter(s => s.source === 'public_registration').length;
 
   return (
     <div
@@ -661,8 +685,13 @@ const PipelineStage = ({
           <h3 className={`font-bold text-lg px-3 py-1 rounded-full border ${stage.color} flex items-center gap-2`}>
             {stage.name}
             <span className="text-sm font-normal">({startups.length})</span>
+            {publicRegistrations > 0 && (
+              <span className="text-xs bg-cyan-600 text-cyan-100 px-2 py-1 rounded-full ml-2">
+                {publicRegistrations} inscritas
+              </span>
+            )}
           </h3>
-          {canDeleteStage && (
+          {canDeleteStage && stage.id !== 'inscrita' && (
             <button
               onClick={handleDeleteStage}
               className="text-gray-400 hover:text-red-400 p-1 rounded hover:bg-gray-700 transition-colors"
@@ -704,7 +733,12 @@ const PipelineStage = ({
         {startups.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Plus size={24} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Arraste startups aqui</p>
+            <p className="text-sm">
+              {stage.id === 'inscrita' 
+                ? 'Startups inscritas aparecerão aqui automaticamente'
+                : 'Arraste startups aqui'
+              }
+            </p>
             {hasTemplates && (
               <p className="text-xs text-blue-400 mt-2">
                 Mensagens automáticas serão enviadas
@@ -1123,6 +1157,12 @@ const SavedStartups = () => {
   };
 
   const handleDeleteStage = async (stageId: string) => {
+    // Não permitir deletar o estágio "Inscrita"
+    if (stageId === 'inscrita') {
+      console.log('⚠️ Não é possível deletar o estágio "Inscrita" - é necessário para inscrições públicas');
+      return;
+    }
+
     // Remove startups from deleted stage
     const startupsToRemove = savedStartups.filter(startup => startup.stage === stageId);
     
@@ -1152,6 +1192,7 @@ const SavedStartups = () => {
 
   // Calculate total startup count
   const totalStartupCount = savedStartups.length;
+  const publicRegistrations = savedStartups.filter(s => s.source === 'public_registration').length;
 
   if (loading) {
     return (
@@ -1223,7 +1264,14 @@ const SavedStartups = () => {
             <h2 className="text-lg font-medium">Pipeline CRM</h2>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">{totalStartupCount} startup{totalStartupCount !== 1 ? 's' : ''}</span>
+            <div className="text-sm text-gray-400 space-x-4">
+              <span>{totalStartupCount} startup{totalStartupCount !== 1 ? 's' : ''}</span>
+              {publicRegistrations > 0 && (
+                <span className="text-cyan-400">
+                  {publicRegistrations} inscrita{publicRegistrations !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <button
               onClick={() => setShowStageManager(true)}
               className="flex items-center gap-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
@@ -1242,25 +1290,50 @@ const SavedStartups = () => {
               <FolderOpen size={64} className="text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Pipeline vazio</h3>
               <p className="text-gray-400 mb-6">
-                Você ainda não tem startups no seu pipeline. Explore as listas de startups e adicione suas favoritas.
+                Você ainda não tem startups no seu pipeline. Explore as listas de startups e adicione suas favoritas, 
+                ou aguarde inscrições em seus desafios públicos.
               </p>
-              <button
-                onClick={() => navigate('/startups')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                Explorar Startups
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => navigate('/startups')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                >
+                  Explorar Startups
+                </button>
+                <button
+                  onClick={() => navigate('/new-challenge')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                >
+                  Criar Desafio Público
+                </button>
+              </div>
             </div>
           ) : (
-            <PipelineBoard
-              startups={savedStartups}
-              stages={pipelineStages}
-              onStageChange={handleStageChange}
-              onStartupClick={handleStartupInteractionClick}
-              onRemoveStartup={handleRemoveStartup}
-              onDeleteStage={handleDeleteStage}
-              onCustomizeMessage={handleCustomizeMessage}
-            />
+            <>
+              {publicRegistrations > 0 && (
+                <div className="mb-6 bg-cyan-900/20 border border-cyan-600 rounded-lg p-4">
+                  <h3 className="text-cyan-200 font-medium mb-2 flex items-center gap-2">
+                    <CheckCircle size={16} />
+                    Inscrições Automáticas Ativas
+                  </h3>
+                  <p className="text-cyan-100 text-sm">
+                    {publicRegistrations} startup{publicRegistrations !== 1 ? 's' : ''} se inscreveu{publicRegistrations === 1 ? '' : 'ram'} 
+                    automaticamente através de desafios públicos e foi{publicRegistrations === 1 ? '' : 'ram'} adicionada{publicRegistrations === 1 ? '' : 's'} 
+                    ao estágio "Inscrita".
+                  </p>
+                </div>
+              )}
+              
+              <PipelineBoard
+                startups={savedStartups}
+                stages={pipelineStages}
+                onStageChange={handleStageChange}
+                onStartupClick={handleStartupInteractionClick}
+                onRemoveStartup={handleRemoveStartup}
+                onDeleteStage={handleDeleteStage}
+                onCustomizeMessage={handleCustomizeMessage}
+              />
+            </>
           )}
         </div>
       </div>
