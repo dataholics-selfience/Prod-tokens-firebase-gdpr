@@ -18,6 +18,7 @@ import SavedStartups from './components/SavedStartups';
 import StartupInteractionTimeline from './components/StartupInteractionTimeline';
 import ContactManagement from './components/ContactManagement';
 import MessageComposer from './components/MessageComposer';
+import PublicChallenge from './components/PublicChallenge';
 import JediSuccess from './pages/plans/success/jedi';
 import MestreJediSuccess from './pages/plans/success/mestrejedi';
 import MestreYodaSuccess from './pages/plans/success/mestreyoda';
@@ -77,10 +78,16 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public Challenge Route - No authentication required */}
+        <Route path="/desafio/:slug" element={<PublicChallenge />} />
+        
+        {/* Authentication Routes */}
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
         <Route path="/verify-email" element={<EmailVerification />} />
+        
+        {/* Protected Routes */}
         <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
         <Route path="/new-challenge" element={user?.emailVerified ? <NewChallenge /> : <Navigate to="/verify-email" replace />} />
         <Route path="/plans" element={<Plans />} />
@@ -102,6 +109,8 @@ function App() {
         <Route path="/plans/success/jedi" element={<JediSuccess />} />
         <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
         <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
+        
+        {/* Default Route */}
         <Route path="/" element={
           user ? (
             user.emailVerified ? (

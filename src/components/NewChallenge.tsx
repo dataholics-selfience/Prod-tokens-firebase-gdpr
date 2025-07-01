@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { doc, getDoc, addDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -13,7 +13,12 @@ const NewChallenge = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    businessArea: ''
+    businessArea: '',
+    companyName: '',
+    logoUrl: '',
+    deadline: '',
+    slug: '',
+    isPublic: false
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,11 +50,25 @@ const NewChallenge = () => {
     }
   };
 
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value,
+      ...(name === 'title' && { slug: generateSlug(value) })
     }));
   };
 
@@ -80,18 +99,26 @@ const NewChallenge = () => {
       const firstName = userData.name?.split(' ')[0] || '';
       const sessionId = uuidv4().replace(/-/g, '');
 
-      const challengeRef = await addDoc(collection(db, 'challenges'), {
+      const challengeData = {
         userId: auth.currentUser.uid,
         userEmail: auth.currentUser.email,
         company: userData.company,
         businessArea: formData.businessArea,
         title: formData.title,
         description: formData.description,
+        companyName: formData.companyName || userData.company,
+        logoUrl: formData.logoUrl,
+        deadline: formData.deadline,
+        slug: formData.slug,
+        isPublic: formData.isPublic,
         sessionId,
-        createdAt: new Date().toISOString()
-      });
+        createdAt: new Date().toISOString(),
+        status: 'active'
+      };
 
-      const message = `Eu sou ${firstName}, um profissional gestor antenado nas novidades e que curte uma fala informal e ao mesmo tempo séria nos assuntos relativos ao Desafio. Eu trabalho na empresa ${userData.company || ''} que atua na área de ${formData.businessArea}. O meu desafio é ${formData.title} e a descrição do desafio é ${formData.description}. Faça uma breve saudação bem humorada e criativa que remete à cultura Geek e que tenha ligação direta com o desafio proposto. Depois, faça de forma direta uma pergu nta sobre o ambiente interno de negócios do cliente, ou seja, sobre sua própira infraestrutura tecnológica, sobre sua operação, sobre os valores envolvidos na perda, ou sobre as possibilidades concretas de implantar a inovação nso processos, sistemas, rotinas ou maquinário - pesquise na internet e seja inteligente ao formular uma linha de questionamento bem embasada, conhecendo muito bem a área de atuação e qual empresa o cliente está representando. Uma pergunta inusitada e útil o suficiente para reforçar a descrição do desafio, com enfoque no ambiente interno da ${userData.company || ''} e seu estágio no quesito de transformação digital.`;
+      const challengeRef = await addDoc(collection(db, 'challenges'), challengeData);
+
+      const message = `Eu sou ${firstName}, um profissional gestor antenado nas novidades e que curte uma fala informal e ao mesmo tempo séria nos assuntos relativos ao Desafio. Eu trabalho na empresa ${userData.company || ''} que atua na área de ${formData.businessArea}. O meu desafio é ${formData.title} e a descrição do desafio é ${formData.description}. Faça uma breve saudação bem humorada e criativa que remete à cultura Geek e que tenha ligação direta com o desafio proposto. Depois, faça de forma direta uma pergunta sobre o ambiente interno de negócios do cliente, ou seja, sobre sua própria infraestrutura tecnológica, sobre sua operação, sobre os valores envolvidos na perda, ou sobre as possibilidades concretas de implantar a inovação nos processos, sistemas, rotinas ou maquinário - pesquise na internet e seja inteligente ao formular uma linha de questionamento bem embasada, conhecendo muito bem a área de atuação e qual empresa o cliente está representando. Uma pergunta inusitada e útil o suficiente para reforçar a descrição do desafio, com enfoque no ambiente interno da ${userData.company || ''} e seu estágio no quesito de transformação digital.`;
 
       console.log('Sending webhook message:', {
         sessionId,
@@ -133,6 +160,11 @@ const NewChallenge = () => {
           content: data[0].output,
           timestamp: new Date().toISOString()
         });
+      }
+
+      if (formData.isPublic) {
+        // Show success message with public URL
+        alert(`Desafio criado com sucesso! Página pública disponível em: ${window.location.origin}/desafio/${formData.slug}`);
       }
 
       navigate('/');
@@ -205,6 +237,84 @@ const NewChallenge = () => {
                 className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 placeholder="Descreva seu desafio em detalhes"
               />
+            </div>
+
+            {/* Seção para Desafio Público */}
+            <div className="border-t border-gray-700 pt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <input
+                  type="checkbox"
+                  name="isPublic"
+                  checked={formData.isPublic}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="text-sm font-medium text-gray-300">
+                  Criar página pública para receber inscrições de startups
+                </label>
+              </div>
+
+              {formData.isPublic && (
+                <div className="space-y-4 bg-gray-800/50 p-4 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Nome da Empresa (para exibição pública)
+                    </label>
+                    <input
+                      type="text"
+                      name="companyName"
+                      value={formData.companyName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nome da empresa que aparecerá na página pública"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Logo da Empresa (URL)
+                    </label>
+                    <input
+                      type="url"
+                      name="logoUrl"
+                      value={formData.logoUrl}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="https://exemplo.com/logo.png"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Prazo para Inscrições
+                    </label>
+                    <input
+                      type="date"
+                      name="deadline"
+                      value={formData.deadline}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      URL da Página (slug)
+                    </label>
+                    <div className="flex items-center">
+                      <span className="text-gray-400 text-sm mr-2">{window.location.origin}/desafio/</span>
+                      <input
+                        type="text"
+                        name="slug"
+                        value={formData.slug}
+                        onChange={handleChange}
+                        className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="meu-desafio"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
