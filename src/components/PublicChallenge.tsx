@@ -14,7 +14,7 @@ interface ChallengeData {
   title: string;
   description: string;
   companyName: string;
-  logoUrl?: string;
+  logoBase64?: string;
   deadline?: string;
   businessArea: string;
   createdAt: string;
@@ -275,11 +275,11 @@ const PublicChallenge = () => {
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {challenge.logoUrl && (
+              {challenge.logoBase64 && (
                 <img 
-                  src={challenge.logoUrl} 
+                  src={challenge.logoBase64} 
                   alt={`${challenge.companyName} Logo`}
-                  className="h-12 w-auto object-contain"
+                  className="h-12 w-auto object-contain rounded"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
