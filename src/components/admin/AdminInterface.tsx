@@ -48,18 +48,8 @@ const AdminInterface = () => {
   }, [environment]);
 
   const getWebhookUrl = (action: 'list' | 'delete' | 'search') => {
-    const baseUrl = API_CONFIG.webhook.url;
-    
-    switch (action) {
-      case 'list':
-        return `${baseUrl}/capta-startups`;
-      case 'delete':
-        return `${baseUrl}/deleta-startups`;
-      case 'search':
-        return `${baseUrl}/busca-startups`;
-      default:
-        return '';
-    }
+    const webhooks = API_CONFIG.adminWebhooks[environment];
+    return webhooks[action] || '';
   };
 
   const loadStartups = async (searchQuery?: string) => {

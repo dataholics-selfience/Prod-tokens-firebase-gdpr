@@ -4,6 +4,18 @@ export const API_CONFIG = {
     headers: {
       'Content-Type': 'application/json'
     }
+  },
+  adminWebhooks: {
+    test: {
+      list: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups',
+      delete: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups',
+      search: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups'
+    },
+    production: {
+      list: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups',
+      delete: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups',
+      search: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups'
+    }
   }
 };
 
