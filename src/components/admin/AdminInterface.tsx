@@ -55,6 +55,7 @@ const AdminInterface = () => {
   const loadStartups = async (searchQuery?: string) => {
     setLoading(true);
     setError('');
+    setStartups([]); // Clear existing startups while loading
     
     try {
       const url = searchQuery ? getWebhookUrl('search') : getWebhookUrl('list');
@@ -66,6 +67,7 @@ const AdminInterface = () => {
 
       console.log(`🔍 Loading startups from ${environment} environment:`, { url, payload });
 
+      // Show loading state and wait for webhook response
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -78,8 +80,9 @@ const AdminInterface = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      console.log('⏳ Waiting for webhook response...');
       const responseText = await response.text();
-      console.log('Raw response:', responseText);
+      console.log('✅ Webhook response received:', responseText.substring(0, 200) + '...');
       
       let data;
       try {
@@ -99,13 +102,17 @@ const AdminInterface = () => {
         throw new Error('Invalid response format: expected array or object');
       }
       
-      console.log(`✅ Received ${data.length} startups`);
+      console.log(`🎯 Successfully processed ${data.length} startups, updating UI...`);
       
+      // Only update state after successful webhook response
       setStartups(data);
       setSelectedStartups(new Set());
+      
+      console.log(`🖥️ UI updated with ${data.length} startups`);
     } catch (error) {
       console.error('Error loading startups:', error);
       setError(`Erro ao carregar startups: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      setStartups([]); // Clear startups on error
     } finally {
       setLoading(false);
     }

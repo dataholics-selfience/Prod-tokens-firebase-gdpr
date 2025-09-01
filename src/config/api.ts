@@ -8,13 +8,13 @@ export const API_CONFIG = {
   adminWebhooks: {
     test: {
       list: '/admin-api/webhook-test/capta-startups',
-      delete: '/admin-api/webhook-test/capta-startups',
-      search: '/admin-api/webhook-test/capta-startups'
+      delete: '/admin-api/webhook-test/deleta-startups',
+      search: '/admin-api/webhook-test/busca-startups'
     },
     production: {
       list: '/admin-api/webhook/capta-startups',
-      delete: '/admin-api/webhook/capta-startups',
-      search: '/admin-api/webhook/capta-startups'
+      delete: '/admin-api/webhook/deleta-startups',
+      search: '/admin-api/webhook/busca-startups'
     }
   }
 };
