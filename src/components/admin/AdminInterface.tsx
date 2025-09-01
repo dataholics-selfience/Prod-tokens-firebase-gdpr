@@ -78,7 +78,23 @@ const AdminInterface = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
+      }
+      
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        console.error('Response is not an array:', data);
+        throw new Error('Expected array response from webhook');
+      }
+      
       console.log(`✅ Received ${data.length} startups`);
       
       setStartups(data);
