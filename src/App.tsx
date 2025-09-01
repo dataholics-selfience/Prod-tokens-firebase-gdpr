@@ -19,6 +19,7 @@ import StartupInteractionTimeline from './components/StartupInteractionTimeline'
 import ContactManagement from './components/ContactManagement';
 import MessageComposer from './components/MessageComposer';
 import PublicChallenge from './components/PublicChallenge';
+import AdminInterface from './components/admin/AdminInterface';
 import JediSuccess from './pages/plans/success/jedi';
 import MestreJediSuccess from './pages/plans/success/mestrejedi';
 import MestreYodaSuccess from './pages/plans/success/mestreyoda';
@@ -109,6 +110,18 @@ function App() {
         <Route path="/plans/success/jedi" element={<JediSuccess />} />
         <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
         <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
+        
+        {/* Admin Route - Only for contact@dataholics.io */}
+        <Route 
+          path="/admin" 
+          element={
+            user?.emailVerified && user?.email === 'contact@dataholics.io' ? (
+              <AdminInterface />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } 
+        />
         
         {/* Default Route */}
         <Route path="/" element={
