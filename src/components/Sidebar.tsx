@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, FolderClosed, FolderOpen, Rocket, BarChart3, Trash2 } from 'lucide-react';
+import { Plus, X, FolderClosed, FolderOpen, Rocket, BarChart3, Trash2, Shield } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';

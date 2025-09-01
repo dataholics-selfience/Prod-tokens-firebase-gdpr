@@ -6,6 +6,7 @@ import {
   Building2, Globe, Mail, Phone, MapPin, Hash
 } from 'lucide-react';
 import { auth } from '../../firebase';
+import { API_CONFIG } from '../../config/api';
 
 interface Startup {
   id: string;
@@ -47,16 +48,15 @@ const AdminInterface = () => {
   }, [environment]);
 
   const getWebhookUrl = (action: 'list' | 'delete' | 'search') => {
-    const baseUrl = 'https://primary-production-2e3b.up.railway.app';
-    const envPath = environment === 'test' ? 'webhook-test' : 'webhook';
+    const baseUrl = API_CONFIG.webhook.url;
     
     switch (action) {
       case 'list':
-        return `${baseUrl}/${envPath}/capta-startups`;
+        return `${baseUrl}/capta-startups`;
       case 'delete':
-        return `${baseUrl}/${envPath}/deleta-startups`;
+        return `${baseUrl}/deleta-startups`;
       case 'search':
-        return `${baseUrl}/${envPath}/busca-startups`;
+        return `${baseUrl}/busca-startups`;
       default:
         return '';
     }
