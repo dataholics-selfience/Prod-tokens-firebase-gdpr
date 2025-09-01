@@ -7,14 +7,14 @@ export const API_CONFIG = {
   },
   adminWebhooks: {
     test: {
-      list: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups',
-      delete: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups',
-      search: 'https://primary-production-2e3b.up.railway.app/webhook-test/capta-startups'
+      list: '/admin-api/webhook-test/capta-startups',
+      delete: '/admin-api/webhook-test/capta-startups',
+      search: '/admin-api/webhook-test/capta-startups'
     },
     production: {
-      list: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups',
-      delete: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups',
-      search: 'https://primary-production-2e3b.up.railway.app/webhook/capta-startups'
+      list: '/admin-api/webhook/capta-startups',
+      delete: '/admin-api/webhook/capta-startups',
+      search: '/admin-api/webhook/capta-startups'
     }
   }
 };

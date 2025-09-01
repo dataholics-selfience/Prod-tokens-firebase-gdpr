@@ -89,10 +89,14 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Ensure data is an array
-      if (!Array.isArray(data)) {
-        console.error('Response is not an array:', data);
-        throw new Error('Expected array response from webhook');
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        console.log(`✅ Received array with ${data.length} startups`);
+      } else if (data && typeof data === 'object') {
+        console.log('Response is a single object, wrapping in array:', data);
+        data = [data];
+      } else {
+        throw new Error('Invalid response format: expected array or object');
       }
       
       console.log(`✅ Received ${data.length} startups`);

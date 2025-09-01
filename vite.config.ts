@@ -21,6 +21,15 @@ function copyRedirectsPlugin() {
 
 export default defineConfig({
   plugins: [react(), copyRedirectsPlugin()],
+  server: {
+    proxy: {
+      '/admin-api': {
+        target: 'https://primary-production-2e3b.up.railway.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/admin-api/, '')
+      }
+    }
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
