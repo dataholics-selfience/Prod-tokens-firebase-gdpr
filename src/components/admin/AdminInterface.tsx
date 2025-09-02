@@ -92,52 +92,46 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle both response formats
+      // Handle the specific response format: [{ results: [...] }]
       let startupData;
       if (Array.isArray(data) && data.length > 0) {
         const firstItem = data[0];
         
-        if (firstItem.response && firstItem.response.body && firstItem.response.body.results) {
-          // Handle Item 2 format: [{ response: { body: { results: [...] } } }]
-          startupData = firstItem.response.body.results;
-          console.log(`✅ Received nested response format with ${startupData.length} startups`);
-        } else if (firstItem.results) {
-          // Handle Item 1 format: [{ results: [...] }]
+        if (firstItem.results && Array.isArray(firstItem.results)) {
+          // Handle format: [{ results: [...] }]
           startupData = firstItem.results;
-          console.log(`✅ Received direct results format with ${startupData.length} startups`);
-        } else if (Array.isArray(firstItem)) {
-          // Handle direct array format
-          startupData = firstItem;
-          console.log(`✅ Received array format with ${startupData.length} startups`);
+          console.log(`✅ Received results format with ${startupData.length} startups`);
         } else {
-          // Handle single object format
-          startupData = [firstItem];
-          console.log('✅ Received single object, wrapped in array');
+          throw new Error('Invalid response format: expected { results: [...] } structure');
         }
-      } else if (Array.isArray(data)) {
-        // Handle direct array of startups
-        startupData = data[0].response.body.results;
-        console.log(`✅ Received direct array with ${startupData.length} startups`);
-      } else if (data && typeof data === 'object') {
-        // Handle single object format
-        console.log('Response is a single object, wrapping in array:', data);
-        startupData = [data];
       } else {
-        throw new Error('Invalid response format: expected array or object');
+        throw new Error('Invalid response format: expected array with results');
       }
       
       // Validate that we have an array of startups
       if (!Array.isArray(startupData)) {
         throw new Error('Invalid startup data: expected array of startups');
       }
+
+      // Validate startup objects have required fields
+      const validStartups = startupData.filter(startup => 
+        startup && 
+        typeof startup === 'object' && 
+        startup.id && 
+        startup.name
+      );
+
+      if (validStartups.length !== startupData.length) {
+        console.warn(`⚠️ Filtered ${startupData.length - validStartups.length} invalid startup objects`);
+      }
       
-      console.log(`🎯 Successfully processed ${startupData.length} startups, updating UI...`);
+      console.log(`🎯 Successfully processed ${validStartups.length} valid startups, updating UI...`);
       
       // Only update state after successful webhook response
-      setStartups(startupData);
+      setStartups(validStartups);
       setSelectedStartups(new Set());
       
-      console.log(`🖥️ UI updated with ${startupData.length} startups`);
+      console.log(`🖥️ UI updated with ${validStartups.length} startups`);
     } catch (error) {
       console.error('Error loading startups:', error);
       setError(`Erro ao carregar startups: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
