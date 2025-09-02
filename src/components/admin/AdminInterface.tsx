@@ -92,7 +92,7 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle the specific response format: [{ results: [...] }]
+      // Handle the response format: [{ results: [...] }]
       let startupData;
       if (Array.isArray(data) && data.length > 0) {
         const firstItem = data[0];
@@ -102,36 +102,27 @@ const AdminInterface = () => {
           startupData = firstItem.results;
           console.log(`✅ Received results format with ${startupData.length} startups`);
         } else {
-          throw new Error('Invalid response format: expected { results: [...] } structure');
+          console.error('Invalid response format - no results array found:', firstItem);
+          throw new Error('Invalid response format: expected { results: [...] }');
         }
       } else {
+        console.error('Invalid response format - not an array or empty:', data);
         throw new Error('Invalid response format: expected array with results');
       }
       
       // Validate that we have an array of startups
       if (!Array.isArray(startupData)) {
-        throw new Error('Invalid startup data: expected array of startups');
-      }
-
-      // Validate startup objects have required fields
-      const validStartups = startupData.filter(startup => 
-        startup && 
-        typeof startup === 'object' && 
-        startup.id && 
-        startup.name
-      );
-
-      if (validStartups.length !== startupData.length) {
-        console.warn(`⚠️ Filtered ${startupData.length - validStartups.length} invalid startup objects`);
+        console.error('Startup data is not an array:', startupData);
+        throw new Error('Invalid startup data: results should be an array');
       }
       
-      console.log(`🎯 Successfully processed ${validStartups.length} valid startups, updating UI...`);
+      console.log(`🎯 Successfully processed ${startupData.length} startups, updating UI...`);
       
       // Only update state after successful webhook response
-      setStartups(validStartups);
+      setStartups(startupData);
       setSelectedStartups(new Set());
       
-      console.log(`🖥️ UI updated with ${validStartups.length} startups`);
+      console.log(`🖥️ UI updated with ${startupData.length} startups`);
     } catch (error) {
       console.error('Error loading startups:', error);
       setError(`Erro ao carregar startups: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
