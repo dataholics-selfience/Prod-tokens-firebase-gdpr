@@ -92,23 +92,52 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle different response formats
-      if (Array.isArray(data)) {
-        console.log(`✅ Received array with ${data.length} startups`);
+      // Handle both response formats
+      let startupData;
+      if (Array.isArray(data) && data.length > 0) {
+        const firstItem = data[0];
+        
+        if (firstItem.response && firstItem.response.body && firstItem.response.body.results) {
+          // Handle Item 2 format: [{ response: { body: { results: [...] } } }]
+          startupData = firstItem.response.body.results;
+          console.log(`✅ Received nested response format with ${startupData.length} startups`);
+        } else if (firstItem.results) {
+          // Handle Item 1 format: [{ results: [...] }]
+          startupData = firstItem.results;
+          console.log(`✅ Received direct results format with ${startupData.length} startups`);
+        } else if (Array.isArray(firstItem)) {
+          // Handle direct array format
+          startupData = firstItem;
+          console.log(`✅ Received array format with ${startupData.length} startups`);
+        } else {
+          // Handle single object format
+          startupData = [firstItem];
+          console.log('✅ Received single object, wrapped in array');
+        }
+      } else if (Array.isArray(data)) {
+        // Handle direct array of startups
+        startupData = data[0].response.body.results;
+        console.log(`✅ Received direct array with ${startupData.length} startups`);
       } else if (data && typeof data === 'object') {
+        // Handle single object format
         console.log('Response is a single object, wrapping in array:', data);
-        data = [data];
+        startupData = [data];
       } else {
         throw new Error('Invalid response format: expected array or object');
       }
       
-      console.log(`🎯 Successfully processed ${data.length} startups, updating UI...`);
+      // Validate that we have an array of startups
+      if (!Array.isArray(startupData)) {
+        throw new Error('Invalid startup data: expected array of startups');
+      }
+      
+      console.log(`🎯 Successfully processed ${startupData.length} startups, updating UI...`);
       
       // Only update state after successful webhook response
-      setStartups(data);
+      setStartups(startupData);
       setSelectedStartups(new Set());
       
-      console.log(`🖥️ UI updated with ${data.length} startups`);
+      console.log(`🖥️ UI updated with ${startupData.length} startups`);
     } catch (error) {
       console.error('Error loading startups:', error);
       setError(`Erro ao carregar startups: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -475,7 +504,7 @@ const AdminInterface = () => {
                     {/* Metadata Length */}
                     <div className="col-span-1">
                       <span className="text-gray-400 font-mono text-xs">
-                        {startup.metadata_length.toLocaleString()}
+                        {startup.metadata_length ? startup.metadata_length.toLocaleString() : '0'}
                       </span>
                     </div>
                   </div>
