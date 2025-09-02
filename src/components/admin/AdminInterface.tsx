@@ -92,22 +92,15 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle the response format: [{ results: [...] }]
+      // Handle the response format: { results: [...] }
       let startupData;
-      if (Array.isArray(data) && data.length > 0) {
-        const firstItem = data[0];
-        
-        if (firstItem.results && Array.isArray(firstItem.results)) {
-          // Handle format: [{ results: [...] }]
-          startupData = firstItem.results;
-          console.log(`✅ Received results format with ${startupData.length} startups`);
-        } else {
-          console.error('Invalid response format - no results array found:', firstItem);
-          throw new Error('Invalid response format: expected { results: [...] }');
-        }
+      if (data && typeof data === 'object' && data.results && Array.isArray(data.results)) {
+        // Handle format: { results: [...] }
+        startupData = data.results;
+        console.log(`✅ Received results format with ${startupData.length} startups`);
       } else {
-        console.error('Invalid response format - not an array or empty:', data);
-        throw new Error('Invalid response format: expected array with results');
+        console.error('Invalid response format - no results array found:', data);
+        throw new Error('Invalid response format: expected { results: [...] }');
       }
       
       // Validate that we have an array of startups
