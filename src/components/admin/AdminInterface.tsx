@@ -94,13 +94,27 @@ const AdminInterface = () => {
       
       // Handle the response format: { results: [...] }
       let startupData;
-      if (data && typeof data === 'object' && data.results && Array.isArray(data.results)) {
+      if (Array.isArray(data)) {
+        // Check if it's an array with a single object containing results
+        if (data.length === 1 && data[0] && typeof data[0] === 'object' && data[0].results && Array.isArray(data[0].results)) {
+          startupData = data[0].results;
+          console.log(`✅ Received nested array format with ${startupData.length} startups`);
+        } else {
+          // Handle direct array response
+          startupData = data;
+          console.log(`✅ Received direct array format with ${startupData.length} startups`);
+        }
+      } else if (data && typeof data === 'object' && data.id && data.name !== undefined) {
+        // Handle single startup object response
+        startupData = [data];
+        console.log(`✅ Received single object format, wrapped in array with 1 startup`);
+      } else if (data && typeof data === 'object' && data.results && Array.isArray(data.results)) {
         // Handle format: { results: [...] }
         startupData = data.results;
         console.log(`✅ Received results format with ${startupData.length} startups`);
       } else {
-        console.error('Invalid response format - no results array found:', data);
-        throw new Error('Invalid response format: expected { results: [...] }');
+        console.error('Invalid response format - expected array, single object, or { results: [...] }:', data);
+        throw new Error('Invalid response format: expected array, single object, or { results: [...] }');
       }
       
       // Validate that we have an array of startups
