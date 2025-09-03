@@ -48,17 +48,26 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          // Recarregar o usuário para garantir que temos os dados mais recentes
-          await reload(user);
-          
           console.log('User state changed:', {
             uid: user.uid,
             email: user.email,
             emailVerified: user.emailVerified
           });
           
+          // Verificar se o usuário existe no Firestore
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists() && userDoc.data().disabled) {
+          
+          if (!userDoc.exists()) {
+            console.log('User document not found in App.tsx');
+            await signOut(auth);
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+          
+          const userData = userDoc.data();
+          
+          if (userData.disabled) {
             console.log('User account is disabled');
             await signOut(auth);
             setUser(null);

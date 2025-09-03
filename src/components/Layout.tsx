@@ -32,17 +32,27 @@ const Layout = () => {
     const challengesQuery = query(
       collection(db, 'challenges'),
       where('userId', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-
+    )
     const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
       const newChallenges = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as ChallengeType[];
       
+          // Verificar se o usuário existe no Firestore
       console.log('Challenges loaded:', newChallenges.length);
-      setChallenges(newChallenges);
+          
+          if (!userDoc.exists()) {
+            console.log('User document not found, redirecting to register');
+            await signOut(auth);
+            setUser(null);
+            return;
+          }
+          
+          const userData = userDoc.data();
+          
+          if (userData.disabled) {
+          }
 
       if (newChallenges.length === 0) {
         const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
@@ -52,7 +62,8 @@ const Layout = () => {
           content: randomMessage,
           timestamp: new Date().toISOString()
         }]);
-      } else if (!currentChallengeId) {
+          // Em caso de erro, ainda definir o usuário para evitar loops
+          setUser(user);
         const firstChallenge = newChallenges[0];
         setCurrentChallengeId(firstChallenge.id);
         // Store current challenge ID for language change functionality

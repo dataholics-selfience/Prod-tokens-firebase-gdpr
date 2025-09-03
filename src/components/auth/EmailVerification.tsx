@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { onAuthStateChanged, sendEmailVerification, signOut } from 'firebase/auth';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { onAuthStateChanged, sendEmailVerification, signOut, reload } from 'firebase/auth';
+import { doc, setDoc, collection, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import { useTranslation } from '../../utils/i18n';
 
@@ -34,24 +34,14 @@ const EmailVerification = () => {
 
       if (user.emailVerified) {
         try {
-          // Verificar se o usuário já existe no Firestore
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          
-          if (!userDoc.exists()) {
-            setError('Dados do usuário não encontrados. Por favor, registre-se novamente.');
-            await signOut(auth);
-            navigate('/register');
-            return;
-          }
-
-          // Atualizar apenas os campos necessários
-          await setDoc(doc(db, 'users', user.uid), {
+          // Atualizar campos de verificação
+          await updateDoc(doc(db, 'users', user.uid), {
             activated: true,
             activatedAt: new Date().toISOString(),
             emailVerified: true
-          }, { merge: true });
+          });
 
-          await setDoc(doc(db, 'gdprCompliance', 'emailVerified'), {
+          await setDoc(doc(collection(db, 'gdprCompliance'), crypto.randomUUID()), {
             uid: user.uid,
             email: user.email,
             emailVerified: true,
@@ -60,8 +50,8 @@ const EmailVerification = () => {
             transactionId: crypto.randomUUID()
           });
 
-          // Redirecionar para a página principal (chat interface)
-          navigate('/', { replace: true });
+          // Forçar reload da página para garantir que o estado seja atualizado
+          window.location.href = '/';
         } catch (error) {
           console.error('Error updating user activation:', error);
           setError('Erro ao ativar conta. Por favor, tente novamente.');
