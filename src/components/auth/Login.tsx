@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Chrome } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -27,25 +27,15 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      navigate('/');
-    } catch (error: any) {
-      setError('Erro ao fazer login com Google');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
+          <img 
+            src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" 
+            alt="Gen.OI Logo" 
+            className="mx-auto h-24 mb-6"
+          />
           <h2 className="text-3xl font-bold text-white mb-2">Entrar</h2>
           <p className="text-gray-400">Acesse sua conta</p>
         </div>
@@ -117,24 +107,6 @@ export default function Login() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-700" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-black text-gray-400">ou</span>
-          </div>
-        </div>
-
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full bg-white hover:bg-gray-100 disabled:bg-gray-200 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-        >
-          <Chrome className="w-5 h-5" />
-          <span>Continuar com Google</span>
-        </button>
 
         <div className="text-center">
           <p className="text-gray-400">
