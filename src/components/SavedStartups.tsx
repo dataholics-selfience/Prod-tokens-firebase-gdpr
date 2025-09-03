@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Star, Calendar, Building2, MapPin, Users, Briefcase, Award, 
   Target, Rocket, ArrowLeft, Mail, Globe, Box, Linkedin,
-  Facebook, Twitter, Instagram, Trash2, FolderOpen, Plus, Check, X, BarChart3
+  Facebook, Twitter, Instagram, Trash2, FolderOpen, Plus, Check, X, BarChart3, CheckCircle
 } from 'lucide-react';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -982,7 +982,7 @@ const PipelineBoard = ({
       )}
 
       {/* Mobile Layout - One stage per row */}
-      <div className="grid grid-cols-1 gap-6 lg:hidden">
+      <div className="grid grid-cols-1 gap-6 sm:hidden">
         {stages.map((stage) => {
           const stageStartups = startups.filter(startup => startup.stage === stage.id);
           
@@ -1002,8 +1002,8 @@ const PipelineBoard = ({
         })}
       </div>
       
-      {/* Desktop Layout - Multiple columns */}
-      <div className="hidden lg:grid gap-6" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
+      {/* Tablet and Desktop Layout - 3 columns per row */}
+      <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {stages.map((stage) => {
           const stageStartups = startups.filter(startup => startup.stage === stage.id);
           
