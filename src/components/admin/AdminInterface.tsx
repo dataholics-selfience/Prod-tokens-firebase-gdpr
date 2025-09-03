@@ -92,13 +92,13 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle the response format: { results: [...] }
+      // Handle different response formats
       let startupData;
       if (Array.isArray(data)) {
-        // Check if it's an array with a single object containing results
-        if (data.length === 1 && data[0] && typeof data[0] === 'object' && data[0].results && Array.isArray(data[0].results)) {
+        // Check if it's an array with objects containing results
+        if (data.length > 0 && data[0] && typeof data[0] === 'object' && data[0].results && Array.isArray(data[0].results)) {
           startupData = data[0].results;
-          console.log(`✅ Received nested array format with ${startupData.length} startups`);
+          console.log(`✅ Received array with nested results format with ${startupData.length} startups`);
         } else {
           // Handle direct array response
           startupData = data;
@@ -113,8 +113,9 @@ const AdminInterface = () => {
         startupData = data.results;
         console.log(`✅ Received results format with ${startupData.length} startups`);
       } else {
-        console.error('Invalid response format - expected array, single object, or { results: [...] }:', data);
-        throw new Error('Invalid response format: expected array, single object, or { results: [...] }');
+        console.error('Invalid response format:', data);
+        console.log('Response structure:', JSON.stringify(data, null, 2).substring(0, 500));
+        throw new Error('Invalid response format: unable to extract startup data');
       }
       
       // Validate that we have an array of startups
@@ -122,6 +123,15 @@ const AdminInterface = () => {
         console.error('Startup data is not an array:', startupData);
         throw new Error('Invalid startup data: results should be an array');
       }
+      
+      // Log detailed parsing information for debugging
+      console.log(`🔍 Parsing details:`, {
+        originalDataType: Array.isArray(data) ? 'array' : typeof data,
+        originalDataLength: Array.isArray(data) ? data.length : 'N/A',
+        hasResults: data && typeof data === 'object' && 'results' in data,
+        finalStartupCount: startupData.length,
+        firstStartup: startupData[0] ? { id: startupData[0].id, name: startupData[0].name } : 'none'
+      });
       
       console.log(`🎯 Successfully processed ${startupData.length} startups, updating UI...`);
       
