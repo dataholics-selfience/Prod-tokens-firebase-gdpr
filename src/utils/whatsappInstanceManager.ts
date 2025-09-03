@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../config/firebase';
 
 // Configuração das instâncias da Evolution API
 export const EVOLUTION_INSTANCES = [

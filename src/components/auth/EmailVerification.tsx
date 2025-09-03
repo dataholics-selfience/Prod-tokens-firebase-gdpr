@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { onAuthStateChanged, sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, setDoc, collection } from 'firebase/firestore';
-import { auth, db } from '../../firebase';
+import { auth, db } from '../../config/firebase';
 import { useTranslation } from '../../utils/i18n';
 
 const EmailVerification = () => {

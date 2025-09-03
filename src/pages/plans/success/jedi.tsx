@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handlePlanSuccess } from '../../../utils/handlePlanSuccess';
+import { auth } from '../../../config/firebase';
 
 export default function JediSuccess() {
   const [error, setError] = useState('');

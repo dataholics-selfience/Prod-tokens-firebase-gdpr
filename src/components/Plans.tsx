@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Baby, Swords, SwordIcon, Sparkles, ArrowLeft, Shield, Lock } from 'lucide-react';
-import { auth, db } from '../firebase';
+import { auth, db } from '../config/firebase';
 import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
 import { useTranslation } from '../utils/i18n';
 

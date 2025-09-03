@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth } from '../config/firebase';
 import Sidebar from './Sidebar';
 import ChatInterface from './ChatInterface';
 import { MessageType, ChallengeType } from '../types';

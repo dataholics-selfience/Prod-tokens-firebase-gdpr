@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, collection, updateDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { auth, db } from "../config/firebase";
 import { deleteUser } from "firebase/auth";
 
 type Plan = "jedi" | "mestrejedi" | "mestreyoda";

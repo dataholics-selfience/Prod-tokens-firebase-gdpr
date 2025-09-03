@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db } from '../config/firebase';
 import { format, addDays } from 'date-fns';
 import { ptBR, enUS, fr, de, it } from 'date-fns/locale';
 import { useTranslation } from '../utils/i18n';
