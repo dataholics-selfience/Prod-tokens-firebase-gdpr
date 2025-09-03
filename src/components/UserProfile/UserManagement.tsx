@@ -17,7 +17,7 @@ import {
   collection
 } from 'firebase/firestore';
 import { ArrowLeft } from 'lucide-react';
-import { auth, db } from '../../config/firebase';
+import { auth, db } from '../../firebase';
 import { UserType, TokenUsageType } from '../../types';
 import TokenUsageChart from '../TokenUsageChart';
 import { useTranslation } from '../../utils/i18n';

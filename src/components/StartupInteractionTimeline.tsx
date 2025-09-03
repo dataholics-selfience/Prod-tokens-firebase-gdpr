@@ -14,7 +14,7 @@ import {
   doc, 
   getDoc
 } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { db, auth } from '../firebase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useTranslation } from '../utils/i18n';

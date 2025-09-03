@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Menu, SendHorizontal, Rocket, FolderOpen, Pencil, Mic, MicOff, BarChart3 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { auth, db } from '../firebase';
 import { MessageType, ChallengeType, TokenUsageType, StartupListType } from '../types';
 import { LoadingStates } from './LoadingStates';
 import { useTranslation } from '../utils/i18n';

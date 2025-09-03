@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { db, auth } from '../firebase';
 import Sidebar from './Sidebar';
 import ChatInterface from './ChatInterface';
 import { MessageType, ChallengeType } from '../types';
@@ -22,37 +22,23 @@ const Layout = () => {
 
   useEffect(() => {
     if (!auth.currentUser) {
-      console.log('No authenticated user found');
       setIsLoading(false);
       return;
     }
 
-    console.log('User authenticated:', auth.currentUser.uid, 'Email verified:', auth.currentUser.emailVerified);
-
     const challengesQuery = query(
       collection(db, 'challenges'),
       where('userId', '==', auth.currentUser.uid),
-    )
+      orderBy('createdAt', 'desc')
+    );
+
     const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
       const newChallenges = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as ChallengeType[];
       
-          // Verificar se o usuário existe no Firestore
-      console.log('Challenges loaded:', newChallenges.length);
-          
-          if (!userDoc.exists()) {
-            console.log('User document not found, redirecting to register');
-            await signOut(auth);
-            setUser(null);
-            return;
-          }
-          
-          const userData = userDoc.data();
-          
-          if (userData.disabled) {
-          }
+      setChallenges(newChallenges);
 
       if (newChallenges.length === 0) {
         const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
@@ -62,8 +48,7 @@ const Layout = () => {
           content: randomMessage,
           timestamp: new Date().toISOString()
         }]);
-          // Em caso de erro, ainda definir o usuário para evitar loops
-          setUser(user);
+      } else if (!currentChallengeId) {
         const firstChallenge = newChallenges[0];
         setCurrentChallengeId(firstChallenge.id);
         // Store current challenge ID for language change functionality
@@ -134,19 +119,6 @@ const Layout = () => {
       </div>
     );
   }
-
-  // Verificar se o usuário está autenticado e tem email verificado
-  if (!auth.currentUser) {
-    console.log('Redirecting to login - no user');
-    return null; // Não renderizar nada, deixar o App.tsx lidar com o redirecionamento
-  }
-
-  if (!auth.currentUser.emailVerified) {
-    console.log('Redirecting to email verification - email not verified');
-    return null; // Não renderizar nada, deixar o App.tsx lidar com o redirecionamento
-  }
-
-  console.log('Rendering main layout for verified user:', auth.currentUser.email);
 
   return (
     <div className="flex h-screen bg-black text-gray-100">

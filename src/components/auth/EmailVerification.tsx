@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { onAuthStateChanged, sendEmailVerification, signOut, reload } from 'firebase/auth';
-import { doc, setDoc, collection, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
+import { onAuthStateChanged, sendEmailVerification, signOut } from 'firebase/auth';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { auth, db } from '../../firebase';
 import { useTranslation } from '../../utils/i18n';
 
 const EmailVerification = () => {
@@ -19,29 +19,16 @@ const EmailVerification = () => {
         return;
       }
 
-      // Se o email já está verificado, redirecionar para home
-      if (user.emailVerified) {
-        navigate('/', { replace: true });
-        return;
-      }
-
-      // Recarregar o usuário para verificar o status mais recente do email
-      try {
-        await user.reload();
-      } catch (error) {
-        console.error('Error reloading user:', error);
-      }
-
       if (user.emailVerified) {
         try {
-          // Atualizar campos de verificação
-          await updateDoc(doc(db, 'users', user.uid), {
+          await setDoc(doc(db, 'users', user.uid), {
             activated: true,
             activatedAt: new Date().toISOString(),
-            emailVerified: true
-          });
+            email: user.email,
+            uid: user.uid
+          }, { merge: true });
 
-          await setDoc(doc(collection(db, 'gdprCompliance'), crypto.randomUUID()), {
+          await setDoc(doc(db, 'gdprCompliance', 'emailVerified'), {
             uid: user.uid,
             email: user.email,
             emailVerified: true,
@@ -50,8 +37,7 @@ const EmailVerification = () => {
             transactionId: crypto.randomUUID()
           });
 
-          // Forçar reload da página para garantir que o estado seja atualizado
-          window.location.href = '/';
+          navigate('/');
         } catch (error) {
           console.error('Error updating user activation:', error);
           setError('Erro ao ativar conta. Por favor, tente novamente.');

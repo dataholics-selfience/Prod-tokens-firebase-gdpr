@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut, reload } from 'firebase/auth';
-import { auth, db } from './config/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { initializeLanguage } from './utils/i18n';
 import Layout from './components/Layout';
@@ -48,31 +48,11 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          console.log('User state changed:', {
-            uid: user.uid,
-            email: user.email,
-            emailVerified: user.emailVerified
-          });
-          
-          // Verificar se o usuário existe no Firestore
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          
-          if (!userDoc.exists()) {
-            console.log('User document not found in App.tsx');
-            await signOut(auth);
-            setUser(null);
-            setLoading(false);
-            return;
-          }
-          
-          const userData = userDoc.data();
-          
-          if (userData.disabled) {
-            console.log('User account is disabled');
+          if (userDoc.exists() && userDoc.data().disabled) {
             await signOut(auth);
             setUser(null);
           } else {
-            console.log('Setting user state');
             setUser(user);
           }
         } catch (error) {
@@ -80,7 +60,6 @@ function App() {
           setUser(user);
         }
       } else {
-        console.log('No user authenticated');
         setUser(null);
       }
       setLoading(false);
@@ -97,8 +76,6 @@ function App() {
     );
   }
 
-  console.log('App render - User:', user ? 'authenticated' : 'not authenticated');
-
   return (
     <Router>
       <Routes>
@@ -109,7 +86,7 @@ function App() {
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
-        <Route path="/verify-email" element={user && !user.emailVerified ? <EmailVerification /> : <Navigate to="/" replace />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
         
         {/* Protected Routes */}
         <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />

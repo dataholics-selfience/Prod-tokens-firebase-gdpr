@@ -15,7 +15,7 @@ import {
   getDocs,
   updateDoc
 } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { db, auth } from '../firebase';
 import { useTranslation } from '../utils/i18n';
 import { validateAndFormatPhone, formatPhoneDisplay } from '../utils/phoneValidation';
 import { sendWhatsAppMessage } from '../utils/whatsappInstanceManager';

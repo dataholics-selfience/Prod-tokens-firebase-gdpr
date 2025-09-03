@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Star, Calendar, Building2, MapPin, Users, Briefcase, Award, 
   Target, Rocket, ArrowLeft, Mail, Globe, Box, Linkedin,
-  Facebook, Twitter, Instagram, Trash2, FolderOpen, Plus, Check, X, BarChart3, CheckCircle
+  Facebook, Twitter, Instagram, Trash2, FolderOpen, Plus, Check, X, BarChart3
 } from 'lucide-react';
 import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, addDoc } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { db, auth } from '../firebase';
 import { StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -982,7 +982,7 @@ const PipelineBoard = ({
       )}
 
       {/* Mobile Layout - One stage per row */}
-      <div className="grid grid-cols-1 gap-6 sm:hidden">
+      <div className="grid grid-cols-1 gap-6 lg:hidden">
         {stages.map((stage) => {
           const stageStartups = startups.filter(startup => startup.stage === stage.id);
           
@@ -1002,8 +1002,8 @@ const PipelineBoard = ({
         })}
       </div>
       
-      {/* Tablet and Desktop Layout - 3 columns per row */}
-      <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      {/* Desktop Layout - Multiple columns */}
+      <div className="hidden lg:grid gap-6" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
         {stages.map((stage) => {
           const stageStartups = startups.filter(startup => startup.stage === stage.id);
           

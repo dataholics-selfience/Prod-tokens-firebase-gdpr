@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { auth, db } from '../firebase';
 import { UserType, TokenUsageType } from '../types';
 
 interface UserProfileProps {

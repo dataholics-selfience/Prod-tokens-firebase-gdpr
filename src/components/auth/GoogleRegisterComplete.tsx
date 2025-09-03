@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '../../config/firebase';
+import { auth, db } from '../../firebase';
 import { v4 as uuidv4 } from 'uuid';
 import { useTranslation } from '../../utils/i18n';
 import { ArrowLeft } from 'lucide-react';

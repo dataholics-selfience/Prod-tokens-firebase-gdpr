@@ -6,7 +6,7 @@ import {
   Facebook, Twitter, Instagram, FolderOpen, Plus, Check, X, BarChart3
 } from 'lucide-react';
 import { collection, query, orderBy, limit, getDocs, addDoc, where, deleteDoc, doc } from 'firebase/firestore';
-import { db, auth } from '../config/firebase';
+import { db, auth } from '../firebase';
 import { StartupListType, StartupType, SocialLink } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
