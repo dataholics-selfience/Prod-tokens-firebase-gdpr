@@ -70,7 +70,7 @@ const ProjectTimeline = ({ planning }: { planning: StartupListType['projectPlann
   
   return (
     <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-blue-500 before:via-purple-500 before:to-pink-500">
-      {planning.map((phase, index) => (
+      {(planning || []).map((phase, index) => (
         <div key={index} className="relative flex items-start gap-6 group">
           <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-blue-600 bg-gray-900 text-blue-600 font-bold">
             {index + 1}
@@ -94,7 +94,7 @@ const ResultsSection = ({ data }: { data: StartupListType }) => {
       <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 p-6 rounded-xl">
         <h3 className="text-xl font-bold text-white mb-4">{t.expectedResults}</h3>
         <ul className="space-y-4">
-          {data.expectedResults.map((result, index) => (
+          {(data.expectedResults || []).map((result, index) => (
             <li key={index} className="flex items-start gap-3">
               <Target className="text-blue-400 mt-1" size={20} />
               <span className="text-gray-300">{result}</span>
@@ -105,7 +105,7 @@ const ResultsSection = ({ data }: { data: StartupListType }) => {
       <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-6 rounded-xl">
         <h3 className="text-xl font-bold text-white mb-4">{t.competitiveAdvantages}</h3>
         <ul className="space-y-4">
-          {data.competitiveAdvantages.map((advantage, index) => (
+          {(data.competitiveAdvantages || []).map((advantage, index) => (
             <li key={index} className="flex items-start gap-3">
               <Award className="text-purple-400 mt-1" size={20} />
               <span className="text-gray-300">{advantage}</span>
