@@ -127,28 +127,12 @@ const Layout = () => {
   // Verificar se o usuário está autenticado e tem email verificado
   if (!auth.currentUser) {
     console.log('Redirecting to login - no user');
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Redirecionando...</div>
-      </div>
-    );
+    return null; // Não renderizar nada, deixar o App.tsx lidar com o redirecionamento
   }
 
   if (!auth.currentUser.emailVerified) {
     console.log('Redirecting to email verification - email not verified');
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-white text-lg mb-4">Email não verificado</div>
-          <button
-            onClick={() => window.location.href = '/verify-email'}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            Verificar Email
-          </button>
-        </div>
-      </div>
-    );
+    return null; // Não renderizar nada, deixar o App.tsx lidar com o redirecionamento
   }
 
   console.log('Rendering main layout');

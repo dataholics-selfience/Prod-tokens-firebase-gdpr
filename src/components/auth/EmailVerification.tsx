@@ -54,7 +54,8 @@ const EmailVerification = () => {
             transactionId: crypto.randomUUID()
           });
 
-          navigate('/');
+          // Redirecionar para a página principal (chat interface)
+          navigate('/', { replace: true });
         } catch (error) {
           console.error('Error updating user activation:', error);
           setError('Erro ao ativar conta. Por favor, tente novamente.');
