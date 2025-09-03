@@ -1,151 +1,150 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut, reload } from 'firebase/auth';
-import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { initializeLanguage } from './utils/i18n';
-import Layout from './components/Layout';
-import Login from './components/auth/Login';
-import Register from './components/auth/Register';
-import ForgotPassword from './components/auth/ForgotPassword';
-import UserManagement from './components/UserProfile/UserManagement';
-import NewChallenge from './components/NewChallenge';
-import Plans from './components/Plans';
-import EmailVerification from './components/auth/EmailVerification';
-import AccountDeleted from './components/AccountDeleted';
-import StartupList from './components/StartupList';
-import SavedStartups from './components/SavedStartups';
-import StartupInteractionTimeline from './components/StartupInteractionTimeline';
-import ContactManagement from './components/ContactManagement';
-import MessageComposer from './components/MessageComposer';
-import PublicChallenge from './components/PublicChallenge';
-import AdminInterface from './components/admin/AdminInterface';
-import JediSuccess from './pages/plans/success/jedi';
-import MestreJediSuccess from './pages/plans/success/mestrejedi';
-import MestreYodaSuccess from './pages/plans/success/mestreyoda';
-import LoadingScreen from './components/LoadingScreen';
+import { useState } from 'react';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../../config/firebase';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, Chrome } from 'lucide-react';
 
-function App() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [languageInitialized, setLanguageInitialized] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Initialize language detection
-    const initLang = async () => {
-      try {
-        await initializeLanguage();
-      } catch (error) {
-        console.error('Language initialization failed:', error);
-      } finally {
-        setLanguageInitialized(true);
-      }
-    };
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-    initLang();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed:', { user: user?.uid, emailVerified: user?.emailVerified });
-      
-      if (user) {
-        try {
-          // Recarregar o usuário para garantir que temos os dados mais recentes
-          await reload(user);
-          
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists() && userDoc.data().disabled) {
-            console.log('User is disabled, signing out');
-            await signOut(auth);
-            setUser(null);
-          } else {
-            console.log('Setting user:', { uid: user.uid, emailVerified: user.emailVerified });
-            setUser(user);
-          }
-        } catch (error) {
-          console.error('Error checking user status:', error);
-          setUser(user);
-        }
-      } else {
-        console.log('No user, setting to null');
-        setUser(null);
-      }
-      setAuthChecked(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
+    } catch (error: any) {
+      setError('Email ou senha incorretos');
+    } finally {
       setLoading(false);
-    });
+    }
+  };
 
-    return () => unsubscribe();
-  }, []);
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
 
-  if (loading || !languageInitialized || !authChecked) {
-    return <LoadingScreen message="Inicializando aplicação..." />;
-  }
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      navigate('/');
+    } catch (error: any) {
+      setError('Erro ao fazer login com Google');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Challenge Route - No authentication required */}
-        <Route path="/desafio/:slug" element={<PublicChallenge />} />
-        
-        {/* Authentication Routes */}
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-        <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
-        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
-        <Route path="/verify-email" element={<EmailVerification />} />
-        
-        {/* Protected Routes */}
-        <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/new-challenge" element={user?.emailVerified ? <NewChallenge /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/startups" element={user?.emailVerified ? <StartupList /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/saved-startups" element={user?.emailVerified ? <SavedStartups /> : <Navigate to="/verify-email" replace />} />
-        <Route 
-          path="/startup/:startupId/timeline" 
-          element={
-            user?.emailVerified ? (
-              <StartupInteractionTimeline onBack={() => window.history.back()} />
-            ) : (
-              <Navigate to="/verify-email" replace />
-            )
-          } 
-        />
-        <Route path="/startup/:startupId/contacts" element={user?.emailVerified ? <ContactManagement /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/startup/:startupId/message" element={user?.emailVerified ? <MessageComposer /> : <Navigate to="/verify-email" replace />} />
-        <Route path="/account-deleted" element={<AccountDeleted />} />
-        <Route path="/plans/success/jedi" element={<JediSuccess />} />
-        <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
-        <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
-        
-        {/* Admin Route - Only for contact@dataholics.io */}
-        <Route 
-          path="/admin" 
-          element={
-            user?.emailVerified && user?.email === 'contact@dataholics.io' ? (
-              <AdminInterface />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } 
-        />
-        
-        {/* Default Route */}
-        <Route path="/" element={
-          user ? (
-            user.emailVerified ? (
-              <Layout />
-            ) : (
-              <Navigate to="/verify-email" replace />
-            )
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <div className="min-h-screen bg-black flex items-center justify-center px-4">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-white mb-2">Entrar</h2>
+          <p className="text-gray-400">Acesse sua conta</p>
+        </div>
+
+        <form onSubmit={handleEmailLogin} className="space-y-6">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="seu@email.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              Senha
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-12 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Sua senha"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              Esqueceu a senha?
+            </Link>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-700" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-black text-gray-400">ou</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full bg-white hover:bg-gray-100 disabled:bg-gray-200 text-gray-900 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+        >
+          <Chrome className="w-5 h-5" />
+          <span>Continuar com Google</span>
+        </button>
+
+        <div className="text-center">
+          <p className="text-gray-400">
+            Não tem uma conta?{' '}
+            <Link to="/register" className="text-blue-400 hover:text-blue-300">
+              Criar conta
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
-
-export default App;
