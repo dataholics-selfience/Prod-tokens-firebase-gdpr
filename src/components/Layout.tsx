@@ -22,9 +22,12 @@ const Layout = () => {
 
   useEffect(() => {
     if (!auth.currentUser) {
+      console.log('No authenticated user found');
       setIsLoading(false);
       return;
     }
+
+    console.log('User authenticated:', auth.currentUser.uid, 'Email verified:', auth.currentUser.emailVerified);
 
     const challengesQuery = query(
       collection(db, 'challenges'),
@@ -38,6 +41,7 @@ const Layout = () => {
         ...doc.data()
       })) as ChallengeType[];
       
+      console.log('Challenges loaded:', newChallenges.length);
       setChallenges(newChallenges);
 
       if (newChallenges.length === 0) {
@@ -119,6 +123,35 @@ const Layout = () => {
       </div>
     );
   }
+
+  // Verificar se o usuário está autenticado e tem email verificado
+  if (!auth.currentUser) {
+    console.log('Redirecting to login - no user');
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white">Redirecionando...</div>
+      </div>
+    );
+  }
+
+  if (!auth.currentUser.emailVerified) {
+    console.log('Redirecting to email verification - email not verified');
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-lg mb-4">Email não verificado</div>
+          <button
+            onClick={() => window.location.href = '/verify-email'}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            Verificar Email
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('Rendering main layout');
 
   return (
     <div className="flex h-screen bg-black text-gray-100">

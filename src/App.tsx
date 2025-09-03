@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, reload } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { initializeLanguage } from './utils/i18n';
@@ -48,11 +48,22 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          // Recarregar o usuário para garantir que temos os dados mais recentes
+          await reload(user);
+          
+          console.log('User state changed:', {
+            uid: user.uid,
+            email: user.email,
+            emailVerified: user.emailVerified
+          });
+          
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists() && userDoc.data().disabled) {
+            console.log('User account is disabled');
             await signOut(auth);
             setUser(null);
           } else {
+            console.log('Setting user state');
             setUser(user);
           }
         } catch (error) {
@@ -60,6 +71,7 @@ function App() {
           setUser(user);
         }
       } else {
+        console.log('No user authenticated');
         setUser(null);
       }
       setLoading(false);
@@ -75,6 +87,8 @@ function App() {
       </div>
     );
   }
+
+  console.log('App render - User:', user ? 'authenticated' : 'not authenticated');
 
   return (
     <Router>

@@ -1,188 +1,151 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase';
-import { useTranslation } from '../../utils/i18n';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signOut, reload } from 'firebase/auth';
+import { auth, db } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { initializeLanguage } from './utils/i18n';
+import Layout from './components/Layout';
+import Login from './components/auth/Login';
+import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
+import UserManagement from './components/UserProfile/UserManagement';
+import NewChallenge from './components/NewChallenge';
+import Plans from './components/Plans';
+import EmailVerification from './components/auth/EmailVerification';
+import AccountDeleted from './components/AccountDeleted';
+import StartupList from './components/StartupList';
+import SavedStartups from './components/SavedStartups';
+import StartupInteractionTimeline from './components/StartupInteractionTimeline';
+import ContactManagement from './components/ContactManagement';
+import MessageComposer from './components/MessageComposer';
+import PublicChallenge from './components/PublicChallenge';
+import AdminInterface from './components/admin/AdminInterface';
+import JediSuccess from './pages/plans/success/jedi';
+import MestreJediSuccess from './pages/plans/success/mestrejedi';
+import MestreYodaSuccess from './pages/plans/success/mestreyoda';
+import LoadingScreen from './components/LoadingScreen';
 
-const Login = () => {
-  const { t } = useTranslation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+function App() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [languageInitialized, setLanguageInitialized] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
-  };
-
-  const validateInputs = () => {
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
-
-    if (!trimmedEmail || !trimmedPassword) {
-      setError('Por favor, preencha todos os campos.');
-      return false;
-    }
-    if (!validateEmail(trimmedEmail)) {
-      setError('Por favor, insira um email válido.');
-      return false;
-    }
-    if (trimmedPassword.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setError('');
-      
-      if (!validateInputs()) {
-        return;
+  useEffect(() => {
+    // Initialize language detection
+    const initLang = async () => {
+      try {
+        await initializeLanguage();
+      } catch (error) {
+        console.error('Language initialization failed:', error);
+      } finally {
+        setLanguageInitialized(true);
       }
+    };
 
-      setIsLoading(true);
+    initLang();
+  }, []);
 
-      const trimmedEmail = email.trim().toLowerCase();
-      const trimmedPassword = password.trim();
-
-      await new Promise(resolve => setTimeout(resolve, 500));
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', { user: user?.uid, emailVerified: user?.emailVerified });
       
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        trimmedEmail,
-        trimmedPassword
-      );
-
-      const user = userCredential.user;
-      if (!user) {
-        throw new Error('No user data available');
+      if (user) {
+        try {
+          // Recarregar o usuário para garantir que temos os dados mais recentes
+          await reload(user);
+          
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists() && userDoc.data().disabled) {
+            console.log('User is disabled, signing out');
+            await signOut(auth);
+            setUser(null);
+          } else {
+            console.log('Setting user:', { uid: user.uid, emailVerified: user.emailVerified });
+            setUser(user);
+          }
+        } catch (error) {
+          console.error('Error checking user status:', error);
+          setUser(user);
+        }
+      } else {
+        console.log('No user, setting to null');
+        setUser(null);
       }
+      setAuthChecked(true);
+      setLoading(false);
+    });
 
-      if (!user.emailVerified) {
-        await auth.signOut();
-        setError('Por favor, verifique seu email antes de fazer login.');
-        navigate('/verify-email');
-        return;
-      }
+    return () => unsubscribe();
+  }, []);
 
-      setError('');
-      navigate('/', { replace: true });
-      
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      const errorMessages: { [key: string]: string } = {
-        'auth/invalid-credential': 'Email ou senha incorretos. Por favor, verifique suas credenciais e tente novamente.',
-        'auth/user-disabled': 'Esta conta foi desativada. Entre em contato com o suporte.',
-        'auth/too-many-requests': 'Muitas tentativas de login. Por favor, aguarde alguns minutos e tente novamente.',
-        'auth/network-request-failed': 'Erro de conexão. Verifique sua internet e tente novamente.',
-        'auth/invalid-email': 'O formato do email é inválido.',
-        'auth/user-not-found': 'Não existe uma conta com este email.',
-        'auth/wrong-password': 'Senha incorreta.',
-        'auth/popup-closed-by-user': 'O processo de login foi interrompido. Por favor, tente novamente.',
-        'auth/operation-not-allowed': 'Este método de login não está habilitado. Entre em contato com o suporte.',
-        'auth/requires-recent-login': 'Por favor, faça login novamente para continuar.',
-      };
-
-      setError(
-        errorMessages[error.code] || 
-        'Ocorreu um erro ao fazer login. Por favor, verifique suas credenciais e tente novamente.'
-      );
-      
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (loading || !languageInitialized || !authChecked) {
+    return <LoadingScreen message="Inicializando aplicação..." />;
+  }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <img 
-            src="https://genoi.net/wp-content/uploads/2024/12/Logo-gen.OI-Novo-1-2048x1035.png" 
-            alt="Genie Logo" 
-            className="mx-auto h-24"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = 'fallback-logo.png';
-            }}
-          />
-          <h2 className="mt-6 text-3xl font-bold text-white">{t.login}</h2>
-        </div>
-
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="text-red-500 text-center bg-red-900/20 p-3 rounded-md border border-red-800">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder={t.email}
-                disabled={isLoading}
-                autoComplete="email"
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder={t.password}
-                disabled={isLoading}
-                minLength={6}
-                autoComplete="current-password"
-              />
-            </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full py-3 px-4 bg-blue-900 hover:bg-blue-800 rounded-md text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
-                isLoading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isLoading ? 'Entrando...' : t.login}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Link 
-              to="/forgot-password" 
-              className="text-sm text-blue-400 hover:text-blue-500"
-              tabIndex={isLoading ? -1 : 0}
-            >
-              {t.forgotPassword}
-            </Link>
-            <Link 
-              to="/register" 
-              className="text-lg text-blue-400 hover:text-blue-500 font-medium uppercase"
-              tabIndex={isLoading ? -1 : 0}
-            >
-              {t.createAccount}
-            </Link>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        {/* Public Challenge Route - No authentication required */}
+        <Route path="/desafio/:slug" element={<PublicChallenge />} />
+        
+        {/* Authentication Routes */}
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
+        <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
+        
+        {/* Protected Routes */}
+        <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/new-challenge" element={user?.emailVerified ? <NewChallenge /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/startups" element={user?.emailVerified ? <StartupList /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/saved-startups" element={user?.emailVerified ? <SavedStartups /> : <Navigate to="/verify-email" replace />} />
+        <Route 
+          path="/startup/:startupId/timeline" 
+          element={
+            user?.emailVerified ? (
+              <StartupInteractionTimeline onBack={() => window.history.back()} />
+            ) : (
+              <Navigate to="/verify-email" replace />
+            )
+          } 
+        />
+        <Route path="/startup/:startupId/contacts" element={user?.emailVerified ? <ContactManagement /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/startup/:startupId/message" element={user?.emailVerified ? <MessageComposer /> : <Navigate to="/verify-email" replace />} />
+        <Route path="/account-deleted" element={<AccountDeleted />} />
+        <Route path="/plans/success/jedi" element={<JediSuccess />} />
+        <Route path="/plans/success/mestrejedi" element={<MestreJediSuccess />} />
+        <Route path="/plans/success/mestreyoda" element={<MestreYodaSuccess />} />
+        
+        {/* Admin Route - Only for contact@dataholics.io */}
+        <Route 
+          path="/admin" 
+          element={
+            user?.emailVerified && user?.email === 'contact@dataholics.io' ? (
+              <AdminInterface />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } 
+        />
+        
+        {/* Default Route */}
+        <Route path="/" element={
+          user ? (
+            user.emailVerified ? (
+              <Layout />
+            ) : (
+              <Navigate to="/verify-email" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
-export default Login;
+export default App;

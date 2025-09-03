@@ -19,13 +19,30 @@ const EmailVerification = () => {
         return;
       }
 
+      // Recarregar o usuário para verificar o status mais recente do email
+      try {
+        await user.reload();
+      } catch (error) {
+        console.error('Error reloading user:', error);
+      }
+
       if (user.emailVerified) {
         try {
+          // Verificar se o usuário já existe no Firestore
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (!userDoc.exists()) {
+            setError('Dados do usuário não encontrados. Por favor, registre-se novamente.');
+            await signOut(auth);
+            navigate('/register');
+            return;
+          }
+
+          // Atualizar apenas os campos necessários
           await setDoc(doc(db, 'users', user.uid), {
             activated: true,
             activatedAt: new Date().toISOString(),
-            email: user.email,
-            uid: user.uid
+            emailVerified: true
           }, { merge: true });
 
           await setDoc(doc(db, 'gdprCompliance', 'emailVerified'), {
