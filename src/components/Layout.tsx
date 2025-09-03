@@ -135,7 +135,7 @@ const Layout = () => {
     return null; // Não renderizar nada, deixar o App.tsx lidar com o redirecionamento
   }
 
-  console.log('Rendering main layout');
+  console.log('Rendering main layout for verified user:', auth.currentUser.email);
 
   return (
     <div className="flex h-screen bg-black text-gray-100">

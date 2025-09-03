@@ -19,6 +19,12 @@ const EmailVerification = () => {
         return;
       }
 
+      // Se o email já está verificado, redirecionar para home
+      if (user.emailVerified) {
+        navigate('/', { replace: true });
+        return;
+      }
+
       // Recarregar o usuário para verificar o status mais recente do email
       try {
         await user.reload();

@@ -100,7 +100,7 @@ function App() {
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
         <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
         <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
-        <Route path="/verify-email" element={<EmailVerification />} />
+        <Route path="/verify-email" element={user && !user.emailVerified ? <EmailVerification /> : <Navigate to="/" replace />} />
         
         {/* Protected Routes */}
         <Route path="/profile" element={user?.emailVerified ? <UserManagement /> : <Navigate to="/verify-email" replace />} />
