@@ -92,54 +92,15 @@ const AdminInterface = () => {
         throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
       }
       
-      // Handle webhook response format - use results[0].item for the startup data
+      // Handle the response format: { results: [...] }
       let startupData;
-      if (Array.isArray(data)) {
-        // Extract startup data from results[0].item structure
-        if (data.length > 0 && data[0] && typeof data[0] === 'object' && data[0].results && Array.isArray(data[0].results)) {
-          // Use results[0].item for each startup in the results array
-          startupData = data[0].results.map((result: any) => {
-            if (result && result.item) {
-              return result.item;
-            }
-            return result; // Fallback if item structure is different
-          }).filter(Boolean); // Remove any null/undefined items
-          
-          console.log(`✅ Extracted ${startupData.length} startups from results[].item structure`);
-        } else {
-          // Fallback for direct array response
-          startupData = data;
-          console.log(`✅ Using direct array format with ${startupData.length} startups`);
-        }
+      if (data && typeof data === 'object' && data.results && Array.isArray(data.results)) {
+        // Handle format: { results: [...] }
+        startupData = data.results;
+        console.log(`✅ Received results format with ${startupData.length} startups`);
       } else {
-        // Handle single object response or other formats
-        if (data && typeof data === 'object') {
-          if (data.results && Array.isArray(data.results)) {
-            // Extract from results[].item structure
-            startupData = data.results.map((result: any) => {
-              if (result && result.item) {
-                return result.item;
-              }
-              return result;
-            }).filter(Boolean);
-            console.log(`✅ Extracted ${startupData.length} startups from object.results[].item structure`);
-          } else if (data.item) {
-            // Single item response
-            startupData = [data.item];
-            console.log(`✅ Extracted 1 startup from single item structure`);
-          } else if (data.id && data.name !== undefined) {
-            // Direct startup object
-            startupData = [data];
-            console.log(`✅ Using single startup object format`);
-          } else {
-            console.error('Invalid response format:', data);
-            console.log('Response structure:', JSON.stringify(data, null, 2).substring(0, 500));
-            throw new Error('Invalid response format: unable to extract startup data');
-          }
-        } else {
-          console.error('Invalid response format:', data);
-          throw new Error('Invalid response format: expected array or object');
-        }
+        console.error('Invalid response format - no results array found:', data);
+        throw new Error('Invalid response format: expected { results: [...] }');
       }
       
       // Validate that we have an array of startups
@@ -148,35 +109,13 @@ const AdminInterface = () => {
         throw new Error('Invalid startup data: results should be an array');
       }
       
-      // Validate startup objects have required fields
-      const validStartups = startupData.filter(startup => {
-        return startup && 
-               typeof startup === 'object' && 
-               startup.id && 
-               startup.name;
-      });
-      
-      if (validStartups.length !== startupData.length) {
-        console.warn(`⚠️ Filtered out ${startupData.length - validStartups.length} invalid startup objects`);
-      }
-      
-      // Log detailed parsing information for debugging
-      console.log(`🔍 Parsing details:`, {
-        originalDataType: Array.isArray(data) ? 'array' : typeof data,
-        originalDataLength: Array.isArray(data) ? data.length : 'N/A',
-        extractedFromItem: true,
-        finalStartupCount: validStartups.length,
-        firstStartup: validStartups[0] ? { id: validStartups[0].id, name: validStartups[0].name } : 'none',
-        sampleFields: validStartups[0] ? Object.keys(validStartups[0]) : []
-      });
-      
-      console.log(`🎯 Successfully processed ${validStartups.length} startups, updating UI...`);
+      console.log(`🎯 Successfully processed ${startupData.length} startups, updating UI...`);
       
       // Only update state after successful webhook response
-      setStartups(validStartups);
+      setStartups(startupData);
       setSelectedStartups(new Set());
       
-      console.log(`🖥️ UI updated with ${validStartups.length} startups`);
+      console.log(`🖥️ UI updated with ${startupData.length} startups`);
     } catch (error) {
       console.error('Error loading startups:', error);
       setError(`Erro ao carregar startups: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
